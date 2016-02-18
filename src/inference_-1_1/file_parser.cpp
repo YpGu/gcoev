@@ -107,8 +107,12 @@ void read_csv_graph(const char* file_dir) {
 	int x = gmap.find(atoi(vec_s[0].c_str())) -> second;
 	int y = gmap.find(atoi(vec_s[1].c_str())) -> second;
 	int weight = atoi(vec_s.at(2).c_str());
-	G[t].graph[x][y] = weight;
-	G[t].graph[y][x] = weight;	// for undirected graph
+//	G[t].graph[x][y] = weight;
+//	G[t].graph[y][x] = weight;	// for undirected graph
+//	G[t].graph[x][y] = 1;
+//	G[t].graph[y][x] = 1;	// for undirected graph
+	G[t].graph[x][y] = (int)log(weight+1);
+	G[t].graph[y][x] = (int)log(weight+1);	// for undirected graph
       }
       my_file.close();
     }
@@ -142,9 +146,56 @@ map<string, int> read_csv_dict(const char* file_dir) {
 /**
  * output X to a file
  * format: <id> <space> <k1, k2, ... >
+ * file_dir example: "./save/"
  */
 void output_hidden(const char* file_dir) {
-  // TODO
+  map<int, int> id_map;
+  if (true) {
+    ifstream my_file;
+    string line;
+    my_file.open("../../data/dict/user_id_map.dat");
+    if (my_file) {
+      while (getline(my_file, line)) {
+	vector<string> vec_s = split(line, ',');
+	int x = atoi(vec_s[0].c_str());	  // old_id
+	int y = atoi(vec_s[1].c_str());	  // original_id
+	id_map[x] = y;
+      }
+      my_file.close();
+    } else {
+      cout << "user_id_map file does not exist!" << endl;
+    }
+  }
+
+  string file_prefix = file_dir;
+  for (int t = start_T; t < T; t++) {
+    ofstream my_file;
+    stringstream ss;
+    ss << t;
+    string file_suffix = ss.str();
+    string file_name = file_prefix + file_suffix + ".txt";
+    if (verbose) cout << file_name << endl;
+
+    my_file.open(file_name.c_str());
+    if (my_file) {
+      int n = G[t].n_users;
+      for (int i = 0; i < n; i++) {
+	int old_id = G[t].u_invert_map[i];
+	int original_id = id_map[old_id];
+	stringstream ssp1; ssp1 << original_id;
+	string newline = ssp1.str();
+	for (int k = 0; k < K; k++) {
+	  stringstream ssp2; ssp2 << G[t].X[i][k];
+	  string s_xk = ssp2.str();
+	  newline = newline + " " + s_xk;
+	}
+	newline = newline + "\n";
+	my_file << newline;
+      }
+
+      my_file.close();
+    }
+  }
 }
 
 

@@ -5,11 +5,16 @@ void backward() {
   double* likelihood_t = new double[T];
 
   // B-step
+  int p_count = 0;
   for (map< int, vector<int> >::iterator map_it = users_time.begin(); map_it != users_time.end(); map_it++) {
+//    if (p_count % 10 == 0) cout << p_count << endl;
+//    p_count++;
     int old_id = map_it->first;
+//    cout << "\n" << old_id << endl;
     vector<int> ts = map_it->second;	// timestamps 
     for (vector<int>::iterator it = ts.begin(); it != ts.end(); it++) {
       int t = *it;
+//      cout << t << ' ';
       if (t == ts[ts.size()-1]) {   // t = T-1
 	int i = G[t].u_map[old_id];
 	for (int k = 0; k < K; k++) {
@@ -39,6 +44,7 @@ void backward() {
 	}
       }
     }
+
   }
 
   // update Sigma

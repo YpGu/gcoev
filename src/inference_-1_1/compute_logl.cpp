@@ -32,11 +32,20 @@ double sigmoid(double x) {
  * output: log ( exp(l_1) + exp(l_2) + ... )
  */
 double log_sum_exp(double* arr, int start, int end, int jump = 1) {
-  double res = 0.0;
+  double n_max = -numeric_limits<double>::max();
+  int i_max = 0;
   for (int i = start; i < end; i += jump) {
-    res += exp(arr[i]);
+    if (arr[i] > n_max) {
+      n_max = arr[i];
+      i_max = i;
+    }
   }
-  res = log(res);
+  double res = 1.0;
+  for (int i = start; i < end; i += jump) {
+    if (i != i_max) 
+      res += exp(arr[i] - n_max);
+  }
+  res = n_max + log(res);
 //  res = log(res + numeric_limits<double>::min());
   return res;
 }
@@ -121,7 +130,7 @@ double update_logl(int t, int i, int k, double xik, double logl) {
 }
 
 double compute_logq(int t, int r, int s, int i, int k) {
-  double lambda = 0.7;
+  double lambda = 0.9;
   double offset = 0;	    // TODO: specific w/ K; very important 
   double ave = 0; int num = 0;
   int n = G[t-1].n_users;

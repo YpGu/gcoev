@@ -25,7 +25,7 @@ def read_data():
         fid += 1
 
     new_id = 0
-    fout = open('./p_dict', 'w')
+    fout = open('./user_id_map.dat', 'w')
     for i in p_map:
         p_map[i] = new_id
         newline = str(new_id) + ',' + str(i) + '\n'

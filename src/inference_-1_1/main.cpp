@@ -37,13 +37,18 @@ int main() {
     // B-step
     backward();
 
+    // output
+    stringstream ss; ss << iter;
+    output_hidden(&("./save/" + ss.str() + "/")[0u]);
+
     /*
     // check X
     for (int t = start_T; t < T; t++) {
       cout << "---------------------" << endl;
       int n = G[t].n_users;
       for (int i = 0; i < n; i++) {
-	cout << "X(" << t << ")(" << i << "): ";
+	int old_id = G[t].u_invert_map[i];
+	cout << "X(" << t << ")(" << old_id << "): ";
 	for (int k = 0; k < K; k++) {
 	  cout << G[t].X[i][k] << " ";
 	}
@@ -52,6 +57,8 @@ int main() {
       cout << "---------------------" << endl;
     }
     */
-
   }
+
 }
+
+
