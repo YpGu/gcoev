@@ -124,7 +124,7 @@ double compute_logq(int t, int r, int s, int i, int k) {
   double lambda = 0.7;
   double offset = 0;	    // TODO: specific w/ K; very important 
   double ave = 0; int num = 0;
-  int n = G[t].n_users;
+  int n = G[t-1].n_users;
   for (int j = 0; j < n; j++) {
     if (G[t-1].graph[i][j] != 0) {	// i -> j
       ave += G[t-1].X[j][k] * G[t-1].graph[i][j];

@@ -68,11 +68,16 @@ void read_csv_graph(const char* file_dir) {
 	int weight = atoi(vec_s.at(2).c_str());
 	G[t].u_map[x] = 0; G[t].u_map[y] = 0;
       }
-      // assign new_id
+      // assign new_id & update users_timestamps
       int new_id = 0;
       for (map<int, int>::iterator it = G[t].u_map.begin(); it != G[t].u_map.end(); it++) {
-	G[t].u_map[it->first] = new_id;
-	G[t].u_invert_map[new_id] = it->first;
+	int old_id = it->first;
+	G[t].u_map[old_id] = new_id;
+	G[t].u_invert_map[new_id] = old_id;
+	if (users_time.find(old_id) == users_time.end()) {
+	  users_time[old_id] = vector<int>(0);
+	}
+	users_time[old_id].push_back(t);	// user 'old_id' appears in time 't'
 	new_id++;
       }
       // create graph
@@ -83,7 +88,6 @@ void read_csv_graph(const char* file_dir) {
     }
   }
   cout << "reading 1 done" << endl;
-  int gu; cin >> gu;
 
   // read G 
   for (int t = start_T; t < T; t++) {
@@ -110,7 +114,7 @@ void read_csv_graph(const char* file_dir) {
     }
   }
   cout << "reading 2 done" << endl;
-  cin >> gu;
+//  cin >> gu;
 
 }
 

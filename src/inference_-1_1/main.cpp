@@ -13,6 +13,7 @@ int main() {
   read_csv_graph(&"../../data/graph/"[0u]);
   init();
   // check X
+  /*
   for (int t = start_T; t < T; t++) {
     cout << "---------------------" << endl;
     int n = G[t].n_users;
@@ -25,6 +26,7 @@ int main() {
     }
     cout << "---------------------" << endl;
   }
+  */
 
   // run
   for (int iter = 0; iter < ITER; iter++) {
@@ -35,6 +37,7 @@ int main() {
     // B-step
     backward();
 
+    /*
     // check X
     for (int t = start_T; t < T; t++) {
       cout << "---------------------" << endl;
@@ -48,6 +51,7 @@ int main() {
       }
       cout << "---------------------" << endl;
     }
+    */
 
   }
 }
