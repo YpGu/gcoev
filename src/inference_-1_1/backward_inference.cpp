@@ -7,42 +7,46 @@ void backward() {
   // B-step
   for (int k = 0; k < K; k++) {
     // t = T-1
-    vector<int> users_T = users.at(T-1);
-    for (vector<int>::iterator it = users_T.begin(); it != users_T.end(); it++) {
-      int i = *it;
-      double p0 = exp(log_pt_tik.at(T-1).at(i).at(k)[0]);
+    int n_T = G[T-1].n_users;
+    for (int i = 0; i < n_T; i++) {
+      double p0 = exp(G[T-1].log_pt_tik[i][k][0]);
       double random = rand() / (double)RAND_MAX;
 cout << "i = " << i << ", t = " << T-1 << ", k = " << k << " p0 = " << p0 << endl;
       if (random < p0) { 
-	X.at(T-1).at(i)[k] = -1; 
+	G[T-1].X[i][k] = -1;
       } else {
-	X.at(T-1).at(i)[k] = 1;
+	G[T-1].X[i][k] = 1;
       }
     }
 
     // t != T-1
-    for (int t = T-2; t >= 0; t--) {
-      vector<int> users_t = users.at(t);
-      for (vector<int>::iterator it = users_t.begin(); it != users_t.end(); it++) {   // for each person
-	int i = *it;
-	double log_row_sum = log_sum_exp(log_pt.at(t+1).at(i).at(k), X.at(t+1).at(i).at(k), 2*2, 2);
-	int cord = ((int)X.at(t+1).at(i).at(k) == 1) ? 1 : 0;
-	double p0 = exp(log_pt.at(t+1).at(i).at(k)[2*0+cord] - log_row_sum);
+    for (int t = T-2; t >= start_T; t--) {
+      int n = G[t].n_users;
+      for (int i = 0; i < n; i++) {
+	double log_row_sum = log_sum_exp(G[t+1].log_pt[i][k], G[t+1].X[i][k], 2*2, 2);
+	int cord = ((int)G[t+1].X[i][k] == 1) ? 1 : 0;
+	double p0 = exp(G[t+1].log_pt[i][k][2*0+cord] - log_row_sum);
 cout << "i = " << i << ", t = " << t << ", k = " << k << " p0 = " << p0 << endl;
 	double random = rand() / (double)RAND_MAX;
 	if (random < p0) {
-	  X.at(t).at(i)[k] = -1;
+	  G[t].X[i][k] = -1;
 	} else {
-	  X.at(t).at(i)[k] = 1;
+	  G[t].X[i][k] = 1;
 	}
       }
     }
   }
 
   // update Sigma
-  for (int t = 0; t < T; t++) for (int i = 0; i < N; i++) for (int j = 0; j < N; j++) {
-    if (i != j) 
-      Sigma.at(t).at(i).at(j) = sigmoid(X.at(t).at(i), X.at(t).at(j));
+  for (int t = start_T; t < T; t++) {
+    int n = G[t].n_users;
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) {
+      if (i != j) {
+	vector<double> xi = G[t].X[i];
+	vector<double> xj = G[t].X[j];
+	G[t].Sigma[i][j] = sigmoid(xi, xj);
+      }
+    }
   }
 
 }

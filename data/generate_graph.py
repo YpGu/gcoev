@@ -7,6 +7,7 @@ y_pos_neg = {}  # year -> [cov ... ]
 
 def read_data():
     files = glob.glob('../../15D/voting_data/all/*')
+    print len(files)
     fid = 0
     for filename in files:
         if fid % 1000 == 0:
@@ -33,18 +34,12 @@ def read_data():
     fout.close()
 
  
-def generate_graph():
-    files = glob.glob('../../15D/voting_data/all/*')
+def generate_graph(year):
+    y_pos_neg = []
+    files = glob.glob('../../15D/voting_data/all/' + str(year+1) + '_*')
     print len(files)
-    fid = 0
     for filename in files:
-        if fid % 1000 == 0:
-            print fid
-        fid += 1
-#        print filename
         year = int(filename.split('/')[-1].split('_')[0]) - 1      # term (start from 0)
-        if year not in y_pos_neg:
-            y_pos_neg[year] = []
         # each bill
         pos = []; neg = []
         fin = open(filename)
@@ -71,27 +66,26 @@ def generate_graph():
             for j in neg:
                 if i < j:
                     cov[(i,j)] = 1
-        y_pos_neg[year].append(cov)
+        y_pos_neg.append(cov)
     
-    for y in y_pos_neg:
-        # each year
-        print y
-        y_cov = {}
-        covs = y_pos_neg[y]
-        for cov in covs:
-            # cov is a dictionary: (i,j) -> e
-            for (i,j) in cov:
-                if (i,j) in y_cov:
-                    y_cov[(i,j)] += cov[(i,j)]
-                else:
-                    y_cov[(i,j)] = cov[(i,j)]
-        fout = open('./graph/' + str(y) + '.csv', 'w')
-        for (i,j) in y_cov:
-            newline = str(i) + ',' + str(j) + ',' + str(y_cov[(i,j)]) + '\n'
-            fout.write(newline)
-        fout.close()
+
+    y_cov = {}
+    for cov in y_pos_neg:
+        # cov is a dictionary: (i,j) -> e
+        for (i,j) in cov:
+            if (i,j) in y_cov:
+                y_cov[(i,j)] += cov[(i,j)]
+            else:
+                y_cov[(i,j)] = cov[(i,j)]
+    fout = open('./graph/' + str(year) + '.csv', 'w')
+    for (i,j) in y_cov:
+        newline = str(i) + ',' + str(j) + ',' + str(y_cov[(i,j)]) + '\n'
+        fout.write(newline)
+    fout.close()
 
 if __name__ == '__main__':
     read_data()
-    generate_graph()
+    for i in range(120):
+        print i,
+        generate_graph(i)
 

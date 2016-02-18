@@ -1,12 +1,12 @@
 #include "util.h"
 
-int N, E, K = 1, T = 3;
+int N, E, K = 2;
+int T = 114;	// real data
+//int T = 3;	// toy example
 int ITER = 100;
-vector< vector< vector<int> > > G;	      // T * N * N
-vector< vector< vector<double> > > X;	      // T * N * K
-vector< vector< vector<double> > > Sigma;     // T * N * N
-vector< vector< vector<double*> > > log_pt;	  // joint p(r,s)
-vector< vector< vector<double*> > > log_pt_tik;   // marginal p(r)
-vector< vector<int> > users;		      // T * ?
+int start_T = 105;
+bool verbose = true;
+
+vector<struct sub_graph> G;		      // T * n * n
 
 

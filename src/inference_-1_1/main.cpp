@@ -7,16 +7,19 @@
 #include "compute_logl.h"
 
 int main() {
+
   // init N, K, T
-  read_csv_graph(&"./test/"[0u]);
+//  read_csv_graph(&"./test/"[0u]);
+  read_csv_graph(&"../../data/graph/"[0u]);
   init();
   // check X
-  for (int t = 0; t < T; t++) {
+  for (int t = start_T; t < T; t++) {
     cout << "---------------------" << endl;
-    for (int i = 0; i < N; i++) {
+    int n = G[t].n_users;
+    for (int i = 0; i < n; i++) {
       cout << "X(" << t << ")(" << i << "): ";
       for (int k = 0; k < K; k++) {
-	cout << X.at(t).at(i).at(k) << " ";
+	cout << G[t].X[i][k] << " ";
       }
       cout << endl;
     }
@@ -33,12 +36,13 @@ int main() {
     backward();
 
     // check X
-    for (int t = 0; t < T; t++) {
+    for (int t = start_T; t < T; t++) {
       cout << "---------------------" << endl;
-      for (int i = 0; i < N; i++) {
+      int n = G[t].n_users;
+      for (int i = 0; i < n; i++) {
 	cout << "X(" << t << ")(" << i << "): ";
 	for (int k = 0; k < K; k++) {
-	  cout << X.at(t).at(i).at(k) << " ";
+	  cout << G[t].X[i][k] << " ";
 	}
 	cout << endl;
       }

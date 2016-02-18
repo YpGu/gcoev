@@ -22,16 +22,20 @@ vector<string> split(const string &s, char delim) {
 void read_csv_graph(const char* file_dir) {
   string line;
   string file_prefix = file_dir;
+  G = vector< struct sub_graph >(T);
+
+  // read N
   N = 0; 
-  for (int t = 0; t < T; t++) {
+  for (int t = start_T; t < T; t++) {
     ifstream my_file;
     stringstream ss;
     ss << t;
     string file_suffix = ss.str();
     string file_name = file_prefix + file_suffix + ".csv";
+    if (verbose)
+      cout << file_name << endl;
     my_file.open(file_name.c_str());
 
-    // read N
     if (my_file) {
       while (getline(my_file, line)) {
 	vector<string> vec_s = split(line, ',');
@@ -45,33 +49,68 @@ void read_csv_graph(const char* file_dir) {
   N++;
   cout << "N = " << N << endl;
 
-  users = vector< vector<int> >(T, vector<int>(0));
-  G = vector< vector< vector<int> > >(T, vector< vector<int> >(N, vector<int>(N)));
-  for (int t = 0; t < T; t++) {
+  // read user map (for each t)
+  for (int t = start_T; t < T; t++) {
+    cout << "t = " << t << endl;
     ifstream my_file;
     stringstream ss;
     ss << t;
     string file_suffix = ss.str();
     string file_name = file_prefix + file_suffix + ".csv";
+    if (verbose) cout << file_name << endl;
 
-    // read G and users
-    map<int, int> map_t;
     my_file.open(file_name.c_str());
     if (my_file) {
       while (getline(my_file, line)) {
 	vector<string> vec_s = split(line, ',');
 	int x = atoi(vec_s.at(0).c_str());
 	int y = atoi(vec_s.at(1).c_str());
-	G.at(t).at(x).at(y) = 1;
-	map_t[x] = 0; map_t[y] = 0;
+	int weight = atoi(vec_s.at(2).c_str());
+	G[t].u_map[x] = 0; G[t].u_map[y] = 0;
       }
-      for (map<int, int>::iterator it = map_t.begin(); it != map_t.end(); it++) {
-	int i = it->first;
-	users.at(t).push_back(it->first);
+      // assign new_id
+      int new_id = 0;
+      for (map<int, int>::iterator it = G[t].u_map.begin(); it != G[t].u_map.end(); it++) {
+	G[t].u_map[it->first] = new_id;
+	G[t].u_invert_map[new_id] = it->first;
+	new_id++;
+      }
+      // create graph
+      G[t].n_users = new_id;
+      G[t].graph = vector< vector<int> >(G[t].n_users, vector<int>(G[t].n_users));
+
+      my_file.close();
+    }
+  }
+  cout << "reading 1 done" << endl;
+  int gu; cin >> gu;
+
+  // read G 
+  for (int t = start_T; t < T; t++) {
+    cout << "t = " << t << endl;
+    ifstream my_file;
+    stringstream ss;
+    ss << t;
+    string file_suffix = ss.str();
+    string file_name = file_prefix + file_suffix + ".csv";
+    if (verbose) cout << file_name << endl;
+
+    my_file.open(file_name.c_str());
+    if (my_file) {
+      map<int, int> gmap = G[t].u_map;
+      while (getline(my_file, line)) {
+	vector<string> vec_s = split(line, ',');
+	int x = gmap.find(atoi(vec_s[0].c_str())) -> second;
+	int y = gmap.find(atoi(vec_s[1].c_str())) -> second;
+	int weight = atoi(vec_s.at(2).c_str());
+	G[t].graph[x][y] = weight;
+	G[t].graph[y][x] = weight;	// for undirected graph
       }
       my_file.close();
     }
   }
+  cout << "reading 2 done" << endl;
+  cin >> gu;
 
 }
 
