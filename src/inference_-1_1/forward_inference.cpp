@@ -36,7 +36,8 @@ void forward() {
 
 	  // dynamic programming: update pi_tik (for next round)
 	  for (int s = 0; s < 2; s++) {
-	    double log_row_sum = log_sum_exp(G[t].log_pt[i][k], s, 2*1+s+1, 2);    // sum for each column
+//	    double log_row_sum = log_sum_exp(G[t].log_pt[i][k], s, 2*1+s+1, 2);    // sum for each column
+	    double log_row_sum = log_sum_exp(G[t].log_pt[i][k], s, 4, 2);    // sum for each column
 	    G[t].log_pt_tik[i][k][s] = log_row_sum;
 	  }
 	}
@@ -57,7 +58,8 @@ void forward() {
 	  for (int r = 0; r < 2; r++) for (int s = 0; s < 2; s++) G[t].log_pt[i][k][2*r+s] -= log_prob_sum;
 	  // dynamic programming: update pi_tik (for next round)
 	  for (int s = 0; s < 2; s++) {
-	    double log_row_sum = log_sum_exp(G[t].log_pt[i][k], s, 2*1+s+1, 2);
+//	    double log_row_sum = log_sum_exp(G[t].log_pt[i][k], s, 2*1+s+1, 2);
+	    double log_row_sum = log_sum_exp(G[t].log_pt[i][k], s, 4, 2);
 	    G[t].log_pt_tik[i][k][s] = log_row_sum;
 	  }
 	}

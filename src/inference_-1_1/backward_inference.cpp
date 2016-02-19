@@ -31,9 +31,10 @@ void backward() {
 	int i = G[t].u_map[old_id];
 	int next_i = G[t+1].u_map[old_id];
 	for (int k = 0; k < K; k++) {
-	  double log_row_sum = log_sum_exp(G[t+1].log_pt[next_i][k], G[t+1].X[next_i][k], 2*2, 2);
 	  int cord = ((int)G[t+1].X[next_i][k] == 1) ? 1 : 0;
-	  double p0 = exp(G[t+1].log_pt[next_i][k][2*0+cord] - log_row_sum);
+//	  double log_row_sum = log_sum_exp(G[t+1].log_pt[next_i][k], G[t+1].X[next_i][k], 2*2, 2);
+	  double log_col_sum = log_sum_exp(G[t+1].log_pt[next_i][k], cord, 2*2, 2);   // should normalize over column: X(t+1)
+	  double p0 = exp(G[t+1].log_pt[next_i][k][2*0+cord] - log_col_sum);
 //cout << "i = " << i << ", t = " << t << ", k = " << k << " p0 = " << p0 << endl;
 	  double random = rand() / (double)RAND_MAX;
 	  if (random < p0) {
