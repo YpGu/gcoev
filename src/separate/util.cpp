@@ -8,7 +8,7 @@ int start_T = 110;
 bool verbose = true;
 
 double stepsize = 0.1;
-double sigma = 100;
+double sigma = 50;
 double lambda = 0.5;
 
 vector<struct sub_graph> G;		// T*1
