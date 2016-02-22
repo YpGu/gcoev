@@ -66,7 +66,7 @@ void read_csv_graph(const char* file_dir) {
 	G[t].u_map[x] = 0; G[t].u_map[y] = 0;
 	vector<string>().swap(vec_s); vec_s.clear();
       }
-      /* assign new_id & update users_timestamps */
+      /* assign new_id */
       int new_id = 0;
       for (map<int, int>::iterator it = G[t].u_map.begin(); it != G[t].u_map.end(); it++) {
 	int old_id = it->first;
@@ -101,7 +101,7 @@ void read_csv_graph(const char* file_dir) {
 	int x = gmap.find(atoi(vec_s[0].c_str())) -> second;
 	int y = gmap.find(atoi(vec_s[1].c_str())) -> second;
 	int weight = atoi(vec_s[2].c_str());
-	if (weight < 1000) continue;
+//	if (weight < 1000) continue;
 //	G[t].graph[x][y] = weight;
 //	G[t].graph[y][x] = weight;	// for undirected graph
 	G[t].graph[x][y] = 1;

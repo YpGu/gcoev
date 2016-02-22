@@ -51,7 +51,7 @@ double log_sum_exp(double* arr, int start, int end, int jump = 1) {
 
 double compute_logl(int t) {
   double res = 0;
-  /*
+  /* all n*n users
   vector<int>::iterator it1, it2;
   int n = G[t].n_users;
   for (int i = 0; i < n; i++) {
@@ -82,6 +82,11 @@ double compute_logl(int t) {
       res += prob;
     }
   }
+  double res1 = res;
+  for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
+    res -= 1/(2*sigma*sigma) * G[t].X[i][k] * G[t].X[i][k];
+  }
+  cout << "\tregularization = " << (res1-res) << endl;
   return res;
 }
 
