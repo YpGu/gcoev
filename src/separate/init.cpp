@@ -2,6 +2,7 @@
 
 void init() {
   cout << "start init..." << endl;
+  double scope = 1;
   for (int t = start_T; t < T; t++) {
     int n = G[t].n_users;
 
@@ -9,8 +10,9 @@ void init() {
     G[t].X = vector< vector<double> >(n, vector<double>(K));
     for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
       double r = rand() / (double)RAND_MAX;
-      if (r < 0.5) G[t].X[i][k] = 1;
-      else G[t].X[i][k] = -1;
+      G[t].X[i][k] = 2 * scope * (r-0.5);
+//      if (r < 0.5) G[t].X[i][k] = 1;
+//      else G[t].X[i][k] = -1;
     }
 
     // ave

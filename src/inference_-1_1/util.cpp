@@ -1,6 +1,6 @@
 #include "util.h"
 
-int N, K = 2;
+int N, K = 1;
 int T = 114;	// real data
 //int T = 3;	// toy example
 int ITER = 100;

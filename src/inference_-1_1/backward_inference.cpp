@@ -12,9 +12,9 @@ void backward() {
     int old_id = map_it->first;
 //    cout << "\n" << old_id << endl;
     vector<int> ts = map_it->second;	// timestamps 
-    for (vector<int>::iterator it = ts.begin(); it != ts.end(); it++) {
-      int t = *it;
-//      cout << t << ' ';
+    for (int offset = 0; offset < ts.size(); offset++) {
+      int t = ts[ts.size()-1] - offset;	// t should be decreasing 
+//      cout << " t = " << t << endl;
       if (t == ts[ts.size()-1]) {   // t = T-1
 	int i = G[t].u_map[old_id];
 	for (int k = 0; k < K; k++) {

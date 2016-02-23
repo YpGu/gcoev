@@ -37,7 +37,9 @@ def read_data():
 def generate_graph(year):
     y_pos_neg = []
     files = glob.glob('../../15D/voting_data/all/' + str(year+1) + '_*')
+    threshold = int(len(files) * 0.2)
     print len(files)
+
     for filename in files:
         year = int(filename.split('/')[-1].split('_')[0]) - 1      # term (start from 0)
         # each bill
@@ -58,20 +60,27 @@ def generate_graph(year):
         fin.close()
         # co-voting relationship for a bill (note: undirected)
         cov = {};
+        # both vote +1
         for i in pos:
             for j in pos:
                 if i < j:
                     cov[(i,j)] = 1
+        # both vote -1
         for i in neg:
             for j in neg:
                 if i < j:
                     cov[(i,j)] = 1
+        # vote differently: 1 & -1
+        for i in pos:
+            for j in neg:
+                if i < j:
+                    cov[(i,j)] = -1
         y_pos_neg.append(cov)
     
 
     y_cov = {}
     for cov in y_pos_neg:
-        # cov is a dictionary: (i,j) -> e
+        # cov is a dictionary: (i,j) -> +1/-1  (agree/disagree)
         for (i,j) in cov:
             if (i,j) in y_cov:
                 y_cov[(i,j)] += cov[(i,j)]
@@ -79,13 +88,16 @@ def generate_graph(year):
                 y_cov[(i,j)] = cov[(i,j)]
     fout = open('./graph/' + str(year) + '.csv', 'w')
     for (i,j) in y_cov:
+        if y_cov[(i,j)] <= threshold:
+            continue            # they have not co-voted enough number of bills
+#        y_cov[(i,j)] -= threshold
         newline = str(i) + ',' + str(j) + ',' + str(y_cov[(i,j)]) + '\n'
         fout.write(newline)
     fout.close()
 
 if __name__ == '__main__':
     read_data()
-    for i in range(120):
+    for i in range(0,120):
         print i,
         generate_graph(i)
 

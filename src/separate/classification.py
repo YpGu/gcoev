@@ -72,7 +72,10 @@ def classification():
             if label[old_id] * predict[old_id] > 0:
                 cor += 1
             tot += 1
-        print cor/tot
+        acc = cor/tot
+        if acc < 0.5:
+            acc = 1-acc
+        print acc
 
 if __name__ == '__main__':
     '''
