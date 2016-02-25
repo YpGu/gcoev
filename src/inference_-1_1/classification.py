@@ -34,7 +34,8 @@ def classification(start, end, jump):
                 old_id = int(ls[0])
                 if old_id not in label:
                     continue
-                k = float(ls[1]) + float(ls[2])
+#                k = float(ls[1]) + float(ls[2])
+                k = float(ls[1])
                 if old_id in predict:
                     predict[old_id] += k
                 else:
@@ -74,7 +75,10 @@ def classification(start, end, jump):
             if label[old_id] * predict[old_id] > 0:
                 cor += 1
             tot += 1
-        print cor/tot
+        acc = cor/tot
+        if acc < 0.5:
+            acc = 1-acc
+        print acc
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
