@@ -6,6 +6,11 @@ public class Operations {
   translate(Matrix arr1, Map<Integer, Integer> map1, Map<Integer, Integer> map2) {
     int n2 = map2.size();
     double[][] arr2 = new double[n2][1];
+    // random prior
+    for (int i = 0; i < n2; i++) {
+      arr2[i][0] = Main.scale * (Main.rand.nextDouble() - 0.5);
+    }
+    // override
     for (Map.Entry<Integer, Integer> e: map1.entrySet()) {
       int global_id = e.getKey();
       if (map2.containsKey(global_id)) {
