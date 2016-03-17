@@ -9,6 +9,7 @@ public class Main {
   public static double sigma = 0.3;
   public static double delta = 0.3;
   public static double scale = 0.2;
+  public static double eps = 0.0001;   // avoid sigular 
   public static Random rand = new Random(0);
 
   public static List<Integer> NS = new ArrayList<Integer>(T);
@@ -26,6 +27,10 @@ public class Main {
   /* impression features */
   public static List<double[][]> muHatS = new ArrayList<double[][]>(T); // backward
   public static List<double[][]> VHatS = new ArrayList<double[][]>(T);	// \hat{V}^{(t)} 
+
+  /* gradients */
+  public static List<double[][]> grad_muS = new ArrayList<double[][]>(T);
+  public static List<double[][]> grad_mu_hatS = new ArrayList<double[][]>(T);
 
   public static List<Map<Integer, Integer>> idMapS = new ArrayList<Map<Integer, Integer>>(T);
   public static List<Double> deltaS = new ArrayList<Double>(T);
@@ -63,25 +68,33 @@ public class Main {
       deltaS.add(0.1);
       double[][] V = new double[n][n];
       double[][] VHat = new double[n][n];
+      double[][] grad_h = new double[n][1];
+      double[][] grad_h_hat = new double[n][1];
       for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) {
 	V[i][j] = 0.01 * scale * (rand.nextDouble() - 0.5);
 	VHat[i][j] = 0.01 * scale * (rand.nextDouble() - 0.5);
       }
-      VS.add(V); HHatS.add(h_hat);
+      Matrix mat_V = new Matrix(V);
+      Matrix vtv = mat_V.transpose().times(mat_V).plus(Matrix.identity(n, n).times(eps));
+      Matrix vtvi = vtv.inverse();
+      VS.add(vtv.getArray()); HHatS.add(h_hat);
       VHatS.add(VHat); 
+      grad_muS.add(grad_h); grad_mu_hatS.add(grad_h_hat);
 
       System.out.println("done! t = " + t);
     }
 
-    forward1();
-    backward1();
+    for (int iter = 0; iter < 10; iter++) {
+      forward1();
+      backward1();
+    }
   }
 
   /* 
    * forward pass 1: update 
-   *  (1) mean mu (muS) 
-   * and 
-   *  (2) variance V (VS)
+   *  (1) mu (muS) 
+   *  (2) grad_mu (grad_muS) 
+   *  (3) variance V (VS)
    */
   public static void forward1() {
     for (int t1 = t0; t1 < T; t1++) {
@@ -89,32 +102,34 @@ public class Main {
       System.out.println("forward\tt = " + t1);
       if (t != 0) {
 	int old_n = NS.get(t-1);	      // N_{t-1}
+	int n = NS.get(t);		      // N_t
 	double delta_t = deltaS.get(t);	      // delta_t
 	Matrix a = new Matrix(AS.get(t-1));   // A^{t-1}
 	Matrix mu_pre_t = new Matrix(muS.get(t-1));   // mu^{t-1}
+	Matrix grad_mu_pre_t = new Matrix(grad_muS.get(t-1));   // grad_mu^{t-1}
 	Matrix V_pre_t = new Matrix(VS.get(t-1));     // V^{t-1}
 	Matrix h_hat_t = Operations.translate(new Matrix(HHatS.get(t)), idMapS.get(t), idMapS.get(t-1), false);    // \hat{h}^t  [t-1]
 	Matrix hprime_pre_t = new Matrix(HPrimeS.get(t-1));   // h'^{t-1} 
-
-	/* calculate \mu */
-	Matrix wsum = mu_pre_t.times(1-lambda).plus(a.times(hprime_pre_t).times(lambda));
 	Matrix iplusv = Matrix.identity(old_n, old_n).times(delta*delta).plus(V_pre_t.times((1-lambda)*(1-lambda)));
 	Matrix Sigma = (iplusv.inverse().plus(Matrix.identity(old_n, old_n).times(1.0/delta_t/delta_t))).inverse();   // \Sigma  [t-1]
-	Matrix addi = Sigma.times(h_hat_t.minus(wsum)).times(1.0/delta_t/delta_t);
-	Matrix mu_t = Operations.translate(wsum.plus(addi), idMapS.get(t-1), idMapS.get(t), true);	  // mu^t  [t]
+
+	/* calculate \mu */
+	Matrix wsum = mu_pre_t.times(1-lambda).plus(a.times(hprime_pre_t).times(lambda));	// for \mu
+	Matrix addi = Sigma.times(h_hat_t.minus(wsum)).times(1.0/delta_t/delta_t);	// for \mu
+	Matrix mu_t = Operations.translate(wsum.plus(addi), idMapS.get(t-1), idMapS.get(t), true);	    // mu^t  [t]
+	/* calculate grad_mu */
+	Matrix g_wsum = grad_mu_pre_t.times(1-lambda).plus(a.times(hprime_pre_t).times(lambda));  // for grad_mu
+	Matrix g_addi = Sigma.times(h_hat_t.minus(g_wsum)).times(1.0/delta_t/delta_t);	// for grad_mu
+	Matrix grad_mu_t = Operations.translate(g_wsum.plus(g_addi), idMapS.get(t-1), idMapS.get(t), true); // grad_mu^t  [t]
 	/* calculate V */
 	Matrix V_t = Operations.translate(Sigma, idMapS.get(t-1), idMapS.get(t), false);   // V^t  [t]
+	V_t = V_t.plus(Matrix.identity(n, n).times(eps));   // make it invertible
 
 	/* update */
 	muS.set(t, mu_t.getArray());
+	grad_muS.set(t, grad_mu_t.getArray());
 	VS.set(t, V_t.getArray());
 
-	/*
-	for (int i = 0; i < mu_t.getRowDimension(); i++) {
-	  System.out.printf("%f ", mu_t.get(i,0));
-	}
-	System.out.print("\n");
-	*/
 	System.out.println(mu_t.getRowDimension());
       } else {
 	// random init: keep unchanged
@@ -126,34 +141,34 @@ public class Main {
 
   /* 
    * backward pass 1: update 
-   *  (1) mean \hat{mu} (muHatS) 
-   * and 
-   *  (2) variance \hat{V} (VHatS)
+   *  (1) \hat{mu} (muHatS) 
+   *  (2) \hat{grad_mu} (grad_mu_hatS)
+   *  (3) \hat{V} (VHatS)
    */
   public static void backward1() {
-    for (int t1 = T-1; t1 >= t0; t1--) {
+    for (int t1 = T-1; t1 > t0; t1--) {
       int t = t1-t0;
       System.out.println("backward\tt = " + t1);
-      // TODO: check init condition (because we use t-1 now)
       if (t != T-1-t0) {
 	int n_pre_t = NS.get(t-1);    // N_{t-1}
 	double rat = (1.0-lambda)/sigma/sigma;
 	Matrix V_pre_t = new Matrix(VS.get(t-1));	// V^{t-1}
-//	Matrix K_pre_t = (V_pre_t.inverse().plus(Matrix.identity(n_pre_t, n_pre_t).times(rat*rat))).inverse();	// K^{t-1}
-	System.out.printf("%d %d\n", V_pre_t.getRowDimension(), V_pre_t.getColumnDimension());
-	Matrix gyp = V_pre_t.inverse();
-	Matrix K_pre_t = (V_pre_t.inverse().plus(Matrix.identity(n_pre_t, n_pre_t).times(rat*rat)));
-	Matrix kkkk = K_pre_t.inverse();
-
+	Matrix K_pre_t = (V_pre_t.inverse().plus(Matrix.identity(n_pre_t, n_pre_t).times(rat*rat))).inverse();	// K^{t-1}
 	Matrix A_pre_t  = new Matrix(AS.get(t-1));	// A^{t-1}
 	Matrix hprime_pre_t = new Matrix(HPrimeS.get(t-1));   // h'^{t-1} 
 	Matrix mu_pre_t = new Matrix(muS.get(t-1));	// \mu^{t-1}
+	Matrix grad_mu_pre_t = new Matrix(grad_muS.get(t-1));	// grad_mu^{t-1}
 	Matrix mu_hat_t = Operations.translate(new Matrix(muHatS.get(t)), idMapS.get(t), idMapS.get(t-1), false);   // \hat{\mu}^{t}  [t-1]
+	Matrix grad_mu_hat_t = Operations.translate(new Matrix(grad_mu_hatS.get(t)), idMapS.get(t), idMapS.get(t-1), false);   // \hat{grad_mu}^{t}  [t-1]
 
 	/* calculate \hat{\mu}^{t-1} */
 	Matrix add1 = mu_hat_t.minus(A_pre_t.times(hprime_pre_t));
 	Matrix add2 = V_pre_t.inverse().times(mu_pre_t).times(sigma*sigma/(1-lambda));
 	Matrix mu_hat_pre_t = K_pre_t.times(add1.plus(add2)).times((1-lambda)/sigma/sigma);
+	/* calculate \hat{grad_mu}^{t-1} */
+	Matrix g_add1 = grad_mu_hat_t.minus(A_pre_t.times(hprime_pre_t));
+	Matrix g_add2 = V_pre_t.inverse().times(grad_mu_pre_t).times(sigma*sigma/(1-lambda));
+	Matrix grad_mu_hat_pre_t = K_pre_t.times(g_add1.plus(g_add2)).times((1-lambda)/sigma/sigma);
 	/* calculate \hat{V}^{t-1} */
 	Matrix V_hat_t = Operations.translate(new Matrix(VHatS.get(t)), idMapS.get(t), idMapS.get(t-1), false);	    // \hat{V}^{t}  [t-1]
 	Matrix kvkt = K_pre_t.times(V_hat_t).times(K_pre_t.transpose());
@@ -161,12 +176,19 @@ public class Main {
 
 	/* update */
 	muHatS.set(t-1, mu_hat_pre_t.getArray());
+	grad_mu_hatS.set(t-1, grad_mu_hat_pre_t.getArray());
 	VHatS.set(t-1, V_hat_pre_t.getArray());
 	System.out.println(mu_hat_t.getRowDimension());
       } else {
-	// initial condition for backward pass: \hat{mu}^{T} = mu^{T}
-	Matrix mu_hat_t = new Matrix(muS.get(t));
-	muHatS.set(t, mu_hat_t.getArray());	// update
+	/* 
+	 * initial condition for backward pass: 
+	 *  (1) \hat{mu}^{T} = mu^{T}
+	 *  (2) \hat{grad_mu}^{T} = grad_mu^{T}
+	 *  (3) \hat{V}^{T} = V^{T}
+	 */
+	muHatS.set(t, muS.get(t));
+	grad_mu_hatS.set(t, grad_muS.get(t));
+	VHatS.set(t, VS.get(t));
       }
       Scanner sc = new Scanner(System.in);
 //      int gu; gu = sc.nextInt();
