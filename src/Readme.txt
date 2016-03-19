@@ -12,5 +12,7 @@
 3. separate
   each time stamp, estimate X(t) = argmax { p(X(t) | X(t-1), G(t-1), G(t)) }
 
+4. lfpm
+  Latent Feature Propagation Model (global estimation)
 
 
