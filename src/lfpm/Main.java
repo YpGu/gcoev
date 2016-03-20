@@ -178,14 +178,14 @@ public class Main {
 	int n = NS.get(t);		      // N_t
 	double delta_t_prime = delta_prime_s.get(t);	      // delta'_t
 	double[] mu_prime_pre_t = Operations.translate(mu_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));  // mu'^{t-1}  [t]
-	double[][] h_prime_t = h_prime_s.get(t);   // h'{t} (n*1)
+	double[][] h_hat_prime_t = h_hat_prime_s.get(t);   // \hat{h}'^{t} (n*1)
 	double[] v_prime_pre_t = Operations.translate(v_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));	  // V'^{t-1} (diagnoal)  [t]
 	/* calculate new round of parameters */
 	double[] mu_prime_t = new double[n];
 	double[] v_prime_t = new double[n];
 	for (int i = 0; i < n; i++) {
 	  double denominator = v_prime_pre_t[i] + sigma*sigma + delta_t_prime*delta_t_prime;
-	  mu_prime_t[i] = delta_t_prime * delta_t_prime * mu_prime_pre_t[i] + (v_prime_pre_t[i] + sigma*sigma) * h_prime_t[i][0];
+	  mu_prime_t[i] = delta_t_prime * delta_t_prime * mu_prime_pre_t[i] + (v_prime_pre_t[i] + sigma*sigma) * h_hat_prime_t[i][0];
 	  mu_prime_t[i] /= denominator;
 	  v_prime_t[i] = delta_t_prime * delta_t_prime * (v_prime_pre_t[i] + sigma*sigma) / denominator;
 	}
@@ -200,13 +200,13 @@ public class Main {
 	 */
 	int n = NS.get(t);
 	double delta_t_prime = delta_prime_s.get(t);	      // delta'_t
-	double[][] h_prime_t = h_prime_s.get(t);   // h'{t} (n*1)
+	double[][] h_hat_prime_t = h_prime_s.get(t);   // \hat{h}'^{t} (n*1)
 	/* calculate new round of parameters */
 	double[] mu_prime_t = new double[n];
 	double[] v_prime_t = new double[n];
 	for (int i = 0; i < n; i++) {
 	  double c = (sigma*sigma) / (sigma*sigma + delta_t_prime*delta_t_prime);
-	  mu_prime_t[i] = c * h_prime_t[i][0];
+	  mu_prime_t[i] = c * h_hat_prime_t[i][0];
 	  v_prime_t[i] = v_prime_init;
 	}
 	/* update */
