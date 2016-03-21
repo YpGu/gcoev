@@ -79,4 +79,42 @@ public class Operations {
     return arr2;
   }
 
+  public static double[][]
+  translate(double[][] mat1, Map<Integer, Integer> map1, Map<Integer, Integer> map2, int debuginfo) {
+    int n2 = map2.size();
+
+    if (mat1.length == mat1[0].length) {
+      double[][] mat2 = new double[n2][n2];
+      /* override some elements */
+      for (Map.Entry<Integer, Integer> e: map1.entrySet()) {
+	int global_id_x = e.getKey();
+	if (map2.containsKey(global_id_x)) {
+	  int local_id2_x = map2.get(global_id_x);
+	  int local_id1_x = map1.get(global_id_x);
+	  for (Map.Entry<Integer, Integer> f: map1.entrySet()) {
+	    int global_id_y = f.getKey();
+	    if (map2.containsKey(global_id_y)) {
+	      int local_id2_y = map2.get(global_id_y);
+	      int local_id1_y = map1.get(global_id_y);
+	      mat2[local_id2_x][local_id2_y] = mat1[local_id1_x][local_id1_y];
+	    }
+	  }
+	}
+      }
+      return mat2;
+    } else {
+      double[][] mat2 = new double[n2][1];
+      /* override some elements */
+      for (Map.Entry<Integer, Integer> e: map1.entrySet()) {
+	int global_id_x = e.getKey();
+	if (map2.containsKey(global_id_x)) {
+	  int local_id2_x = map2.get(global_id_x);
+	  int local_id1_x = map1.get(global_id_x);
+	  mat2[local_id2_x][0] = mat1[local_id1_x][0];
+	}
+      }
+      return mat2;
+    }
+  }
+
 }
