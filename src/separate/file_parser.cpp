@@ -76,6 +76,14 @@ void read_csv_graph(const char* file_dir) {
     string file_name = file_prefix + file_suffix + ".csv";
     if (verbose) cout << file_name << endl;
 
+    ofstream my_file_out;
+    string output_file_dir = file_prefix + file_suffix + "_neg.csv";
+    my_file_out.open(output_file_dir.c_str());
+    if (!my_file_out) {
+      cout << "file writing error!" << endl;
+      return;
+    }
+
     my_file.open(file_name.c_str());
     if (my_file) {
       int n_t = G[t].n_users;
@@ -114,18 +122,29 @@ void read_csv_graph(const char* file_dir) {
 	vector<int>::iterator it = set_difference(all_users.begin(), all_users.end(), 
 	    pos_users.begin(), pos_users.end(), diff.begin());
 	diff.resize(it - diff.begin());
+
 	if (diff.size() >= pos_users.size()) {
 	  random_shuffle(diff.begin(), diff.end());
 	  for (int a = 0; a < pos_users.size(); a++) {
 	    int j = diff[a];
 	    int encode = i * n_t + j;
 	    G[t].encoded_all.push_back(encode);
+	    /* write negative links to file */
+	    stringstream ssp1; ssp1 << G[t].u_invert_map[i]; string old_i = ssp1.str();
+	    stringstream ssp2; ssp2 << G[t].u_invert_map[j]; string old_j = ssp2.str();
+	    string newline = old_i + "," + old_j + "\n";
+	    my_file_out << newline;
 	  }
 	} else {
 	  for (int a = 0; a < diff.size(); a++) {
 	    int j = diff[a];
 	    int encode = i * n_t + j;
 	    G[t].encoded_all.push_back(encode);
+	    /* write negative links to file */
+	    stringstream ssp1; ssp1 << G[t].u_invert_map[i]; string old_i = ssp1.str();
+	    stringstream ssp2; ssp2 << G[t].u_invert_map[j]; string old_j = ssp2.str();
+	    string newline = old_i + "," + old_j + "\n";
+	    my_file_out << newline;
 	  }
 	}
 
@@ -135,6 +154,7 @@ void read_csv_graph(const char* file_dir) {
       }
       /* free */
       vector<int>().swap(all_users); all_users.clear();
+      my_file_out.close();
 
       /* initialize hX */
       G[t].hgX = vector< vector<double> >(n_t, vector<double>(K));
