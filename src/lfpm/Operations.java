@@ -80,7 +80,7 @@ public class Operations {
   }
 
   public static double[][]
-  translate(double[][] mat1, Map<Integer, Integer> map1, Map<Integer, Integer> map2, int debuginfo) {
+  translate(double[][] mat1, Map<Integer, Integer> map1, Map<Integer, Integer> map2) {
     int n2 = map2.size();
 
     if (mat1.length == mat1[0].length) {

@@ -34,8 +34,7 @@ public class FileParser {
 	else 
 	  freq.put(id2, freq.get(id2) + 1);
       }
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
 
@@ -61,40 +60,57 @@ public class FileParser {
       for (int x = 0; x < n; x++) {
 	A[x][x] = Main.lambda;
       }
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
 
     return;
   }
 
-	public static void
-	output(double[][] arr, String fileDir) {
-		try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
-			for (int i = 0; i < arr.length; i++) {
-				writer.printf("%d\t", i);
-				for (int j = 0; j < arr[0].length; j++) {
-					writer.printf("%f\t", arr[i][j]);
-				}
-				writer.printf("\n");
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+  public static void
+  output(double[][] arr, String fileDir) {
+    try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+      for (int i = 0; i < arr.length; i++) {
+        writer.printf("%d ", i);
+	for (int j = 0; j < arr[i].length; j++) {
+	  writer.printf("%f ", arr[i][j]);
 	}
+        writer.printf("\n");
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
-	public static void
-	output(double[] arr, String fileDir) {
-		try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
-			for (int i = 0; i < arr.length; i++) {
-				writer.printf("%d\t%f\n", i, arr[i]);
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+  /* arr_s.get(t) is a n*1 array */
+  public static void
+  output(List<double[][]> arr_s, String fileDir) {
+    try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+      for (int i = 0; i < arr_s.size(); i++) {
+	double[][] arr = arr_s.get(i);
+        writer.printf("%d ", i);
+	for (int j = 0; j < arr.length; j++) {
+	  writer.printf("%f ", arr[j][0]);
 	}
+        writer.printf("\n");
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /* arr_s.get(t) is a n*1 array */
+  public static void
+  output(Map<Integer, Integer> id_map, String fileDir) {
+    try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+      for (Map.Entry<Integer, Integer> e: id_map.entrySet()) {
+	int globalID = e.getKey();
+	int localID = e.getValue();
+	writer.printf("%d %d\n", globalID, localID);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
 }
