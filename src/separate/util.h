@@ -28,6 +28,7 @@ struct sub_graph {
   /* dictionary */
   map<int, int> u_map;		  // global_id -> local_id
   map<int, int> u_invert_map;	  // local_id -> global_id (used for reverse lookup)
+  map<int, bool> has_predecessor; // local_id -> has predecessor or not
 
   /* graph */
   vector< vector<int> > graph;	  // graph: n*n

@@ -24,32 +24,6 @@ void read_csv_graph(const char* file_dir) {
   string file_prefix = file_dir;
   G = vector< struct sub_graph >(T);
 
-  /* read N
-  int N = 0; 
-  for (int t = start_T; t < T; t++) {
-    ifstream my_file;
-    stringstream ss;
-    ss << t;
-    string file_suffix = ss.str();
-    string file_name = file_prefix + file_suffix + ".csv";
-    if (verbose)
-      cout << file_name << endl;
-    my_file.open(file_name.c_str());
-
-    if (my_file) {
-      while (getline(my_file, line)) {
-	vector<string> vec_s = split(line, ',');
-	int x = atoi(vec_s.at(0).c_str());
-	int y = atoi(vec_s.at(1).c_str());
-	N = max(N, x); N = max(N, y); 
-      }
-      my_file.close();
-    }
-  }
-  N++;
-  cout << "N = " << N << endl;
-  */
-
   // read user map (for each t)
   for (int t = start_T; t < T; t++) {
     cout << "t = " << t << endl;
@@ -72,6 +46,16 @@ void read_csv_graph(const char* file_dir) {
 	int old_id = it->first;
 	G[t].u_map[old_id] = new_id;
 	G[t].u_invert_map[new_id] = old_id;
+	if (t == start_T) {
+	  G[t].has_predecessor[new_id] = false;
+	} else {
+	  map<int, int>::iterator it = G[t-1].u_map.find(old_id);
+	  if (it == G[t-1].u_map.end()) {
+	    G[t].has_predecessor[new_id] = false;
+	  } else {
+	    G[t].has_predecessor[new_id] = true;
+	  }
+	}
 	new_id++;
       }
       /* create graph */
@@ -149,7 +133,6 @@ void read_csv_graph(const char* file_dir) {
 	vector<int>().swap(pos_users); pos_users.clear();
 	vector<int>().swap(diff); diff.clear();
       }
-//      int gu; cin >> gu;
       /* free */
       vector<int>().swap(all_users); all_users.clear();
 
