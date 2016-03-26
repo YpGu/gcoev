@@ -249,3 +249,20 @@ void output_hidden(const char* file_dir) {
 }
 
 
+/* output 2d matrix to file */
+void output_2d(const char* file_dir, vector< vector<double> > arr, int n1, int n2) {
+  ofstream my_file;
+  my_file.open(file_dir);
+  if (my_file) {
+    for (int i = 0; i < n1; i++) {
+      string newline = "";
+      for (int k = 0; k < n2; k++) {
+	stringstream ss; ss << arr[i][k];
+	newline = newline + ss.str() + " ";
+      }
+      newline = newline + "\n";
+      my_file << newline;
+    }
+  }
+}
+

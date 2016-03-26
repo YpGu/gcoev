@@ -12,11 +12,10 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
   bool check_grad = false;
   double old_obj = compute_logl(t);
   for (int n_iter = 0; n_iter < ITER; n_iter++) {
-    cout << "*** iteration " << n_iter << " ***" << endl;
+    cout << "\n*** iteration " << n_iter << " ***" << endl;
     int t_n = G[t].n_users;
     vector< vector<double> > grad = vector< vector<double> >(t_n, vector<double>(K));
-    if (n_iter % 1 == 0) 
-      check_grad = true;
+    if (n_iter % 1 == 0) check_grad = true;
     double grad_norm = 0;
     for (vector<int>::iterator it = G[t].encoded_all.begin(); it != G[t].encoded_all.end(); it++) {
       int e = *it; int i = e/t_n; int j = e%t_n;
@@ -31,11 +30,6 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
   	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
 	    grad[i][k] += grad_xik;
 	    grad[j][k] += grad_xjk;
-	    if (check_grad) {
-	      double v1 = grad_xik;
-	      double v2 = grad_xjk;
-	      grad_norm += (v1 * v1 + v2 * v2);
-	    }
 	  }
 	} else {			  /* 1.2 not the first time */
 	  int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
@@ -47,11 +41,6 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    grad[i][k] += grad_xik;
 	    grad[j][k] += grad_xjk;
-	    if (check_grad) {
-	      double v1 = grad_xik;
-	      double v2 = grad_xjk;
-	      grad_norm += (v1 * v1 + v2 * v2);
-	    }
 	  }
 	}
       } else {			      /* 2. negative link */
@@ -64,11 +53,6 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
   	    double grad_xjk = -ss * G[t].X[i][k];
 	    grad[i][k] += grad_xik;
 	    grad[j][k] += grad_xjk;
-	    if (check_grad) {
-	      double v1 = grad_xik;
-	      double v2 = grad_xjk;
-	      grad_norm += (v1 * v1 + v2 * v2);
-	    }
 	  }
 	} else {			  /* 2.2 not the first time */
 	  int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
@@ -80,20 +64,23 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    grad[i][k] += grad_xik;
 	    grad[j][k] += grad_xjk;
-	    if (check_grad) {
-	      double v1 = grad_xik;
-	      double v2 = grad_xjk;
-	      grad_norm += (v1 * v1 + v2 * v2);
-	    }
 	  }
 	}
       }
     }
+
+    /* check gradient */
+    if (check_grad) for (int i = 0; i < G[t].n_users; i++) for (int k = 0; k < K; k++) {
+      grad_norm += grad[i][k] * grad[i][k];
+    }
+
     /* line search */
-    for (int iter = 0; iter < 10; iter++) {
+    double cur_stepsize = stepsize;
+    double com_obj = old_obj;
+    for (int iter = 0; iter < 20; iter++) {
       vector< vector<double> > tmp_value = vector< vector<double> >(t_n, vector<double>(K));
       for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
-	tmp_value[i][k] = G[t].X[i][k] + stepsize * grad[i][k] / 100;
+	tmp_value[i][k] = G[t].X[i][k] + cur_stepsize * grad[i][k];
       }
       double llt = compute_logl_tentative(t, tmp_value);
       cout << "line search: objective = " << llt << endl;
@@ -103,25 +90,32 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
 	  G[t].X[i][k] = tmp_value[i][k];
 	}
+	vector< vector<double> >().swap(tmp_value);
+	tmp_value.clear();
+	break;
       }
       vector< vector<double> >().swap(tmp_value);
       tmp_value.clear();
-      stepsize *= 0.5;
+      cur_stepsize *= 0.5;
     }
 
     /* next iteration of stochastic gradient ascent */
-    if (n_iter % 10 == 0) {
+    if (n_iter % 1 == 0) {
       double llt = compute_logl(t);
-      cout << "log likelihood at time " << t << " = " << llt << endl;
+      cout << "log likelihood at time " << t << " (iter " << n_iter << ") = " << llt << endl;
     }
     if (check_grad) {
       check_grad = false;
-      if (verbose) cout << "l2 norm of gradient = " << grad_norm << endl;
+      output_2d("./tmp/grad1", grad, G[t].n_users, K);
+      if (verbose) cout << "l2 norm of gradient = " << sqrt(grad_norm) << endl;
     }
 
     /* free gradients */
     vector< vector<double> >().swap(grad);
     grad.clear();
+
+    if (fabs((old_obj - com_obj) / com_obj) < 1e-6 && n_iter > 3) 
+      break;
   }
 
   /* update ave[i][k] for graph at time t */
