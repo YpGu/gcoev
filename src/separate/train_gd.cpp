@@ -15,7 +15,7 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
     cout << "*** iteration " << n_iter << " ***" << endl;
     int t_n = G[t].n_users;
     vector< vector<double> > grad = vector< vector<double> >(t_n, vector<double>(K));
-    if (n_iter % 10 == 0) 
+    if (n_iter % 1 == 0) 
       check_grad = true;
     double grad_norm = 0;
     for (vector<int>::iterator it = G[t].encoded_all.begin(); it != G[t].encoded_all.end(); it++) {
@@ -109,10 +109,6 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
       stepsize *= 0.5;
     }
 
-    /* free gradients */
-    vector< vector<double> >().swap(grad);
-    grad.clear();
-
     /* next iteration of stochastic gradient ascent */
     if (n_iter % 10 == 0) {
       double llt = compute_logl(t);
@@ -122,6 +118,10 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
       check_grad = false;
       if (verbose) cout << "l2 norm of gradient = " << grad_norm << endl;
     }
+
+    /* free gradients */
+    vector< vector<double> >().swap(grad);
+    grad.clear();
   }
 
   /* update ave[i][k] for graph at time t */
