@@ -18,7 +18,7 @@ extern int ITER;      // total number of iterations
 extern bool verbose;  // do you want to see more outputs?
 
 extern double stepsize;
-extern double sigma;	  // variance
+extern double delta;	  // variance
 extern double lambda;	  // (1-lambda) * self + lambda * ave_neighbor
 
 /* graph information for each time stamp */
@@ -43,6 +43,7 @@ struct sub_graph {
 };
 
 extern vector<struct sub_graph> G;	      // T*1
+extern vector<double> alpha_s;		      // T*1
 
 #endif
 

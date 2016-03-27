@@ -4,11 +4,11 @@
  * train(): train the latent features for each time stamp t
  * t: current timestamp
  * stepsize: initial stepsize for SGD
- * sigma: variance of Gaussian dist. 
- *    1/(2*sigma*sigma) is the regularization coefficient
+ * delta: variance of Gaussian dist. 
+ *    1/(2*delta*delta) is the regularization coefficient
  * lambda: tradeoff between self and neighbors (0 <= lambda <= 1)
  */
-void train(int t, double stepsize, double sigma, double lambda) {
+void train(int t, double stepsize, double delta, double lambda) {
   bool check_grad = false;
   for (int n_iter = 0; n_iter < ITER; n_iter++) {
     cout << "*** iteration " << n_iter << " ***" << endl;
@@ -24,8 +24,8 @@ void train(int t, double stepsize, double sigma, double lambda) {
 	double ss = sigmoid(G[t].X[i], G[t].X[j]);
 	if (!G[t].has_predecessor[i]) {	  /* 1.1 for the first time */
 	  for (int k = 0; k < K; k++) {
-//	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] - 1.0/(sigma*sigma) * G[t].X[i][k];
-//	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k] - 1.0/(sigma*sigma) * G[t].X[j][k]; 
+//	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
+//	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k]; 
   	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k];
   	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
 	    G[t].hgX[i][k] += grad_xik * grad_xik;
@@ -43,9 +43,9 @@ void train(int t, double stepsize, double sigma, double lambda) {
 	  int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
 	  for (int k = 0; k < K; k++) {
 	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] 
-	      - 1.0/(sigma*sigma) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
 	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k]
-	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
+	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    G[t].hgX[i][k] += grad_xik * grad_xik;
 	    G[t].hgX[j][k] += grad_xjk * grad_xjk;
 	    G[t].X[i][k] += grad_xik * stepsize / sqrt(G[t].hgX[i][k]);
@@ -61,8 +61,8 @@ void train(int t, double stepsize, double sigma, double lambda) {
 	double ss = sigmoid(G[t].X[i], G[t].X[j]);
 	if (!G[t].has_predecessor[i]) {	  /* 2.1 for the first time */
 	  for (int k = 0; k < K; k++) {
-//	    double grad_xik = -ss * G[t].X[j][k] - 1.0/(sigma*sigma) * G[t].X[i][k];
-//	    double grad_xjk = -ss * G[t].X[i][k] - 1.0/(sigma*sigma) * G[t].X[j][k];
+//	    double grad_xik = -ss * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
+//	    double grad_xjk = -ss * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k];
   	    double grad_xik = -ss * G[t].X[j][k];
   	    double grad_xjk = -ss * G[t].X[i][k];
 	    G[t].hgX[i][k] += grad_xik * grad_xik;
@@ -80,9 +80,9 @@ void train(int t, double stepsize, double sigma, double lambda) {
 	  int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
 	  for (int k = 0; k < K; k++) {
 	    double grad_xik = -ss * G[t].X[j][k] 
-	      - 1.0/(sigma*sigma) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
 	    double grad_xjk = -ss * G[t].X[i][k]
-	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
+	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    G[t].hgX[i][k] += grad_xik * grad_xik;
 	    G[t].hgX[j][k] += grad_xjk * grad_xjk;
 	    G[t].X[i][k] += grad_xik * stepsize / sqrt(G[t].hgX[i][k]);
@@ -125,9 +125,9 @@ void train(int t, double stepsize, double sigma, double lambda) {
 	  double ss = sigmoid(G[t].X[i], G[t].X[j]);
 	  for (int k = 0; k < K; k++) {
 	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] 
-	      - 1.0/(sigma*sigma) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
 	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k]
-	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
+	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    G[t].hgX[i][k] += grad_xik * grad_xik;
 	    G[t].hgX[j][k] += grad_xjk * grad_xjk;
 	    G[t].X[i][k] += grad_xik * stepsize / sqrt(G[t].hgX[i][k]);
@@ -142,9 +142,9 @@ void train(int t, double stepsize, double sigma, double lambda) {
 	  double ss = sigmoid(G[t].X[i], G[t].X[j]);
 	  for (int k = 0; k < K; k++) {
 	    double grad_xik = -ss * G[t].X[j][k] 
-	      - 1.0/(sigma*sigma) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
 	    double grad_xjk = -ss * G[t].X[i][k]
-	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
+	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    G[t].hgX[i][k] += grad_xik * grad_xik;
 	    G[t].hgX[j][k] += grad_xjk * grad_xjk;
 	    G[t].X[i][k] += grad_xik * stepsize / sqrt(G[t].hgX[i][k]);

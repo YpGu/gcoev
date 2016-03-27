@@ -33,6 +33,12 @@ void init() {
   }
   */
 
+  /* init alpha_s (prior) */
+  alpha_s = vector<double>(T);
+  for (int t = start_T; t < T; t++) {
+    alpha_s[t] = 0.5;
+  }
+
   cout << "init done" << endl;
 }
 

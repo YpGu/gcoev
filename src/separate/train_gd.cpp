@@ -4,15 +4,15 @@
  * train(): train the latent features for each time stamp t
  * t: current timestamp
  * stepsize: initial stepsize for GD
- * sigma: variance of Gaussian dist. 
- *    1/(2*sigma*sigma) is the regularization coefficient
+ * delta: variance of Gaussian dist. 
+ *    1/(2*delta*delta) is the regularization coefficient
  * lambda: tradeoff between self and neighbors (0 <= lambda <= 1)
  */
-void train_gd(int t, double stepsize, double sigma, double lambda) {
+void train_gd(int t, double stepsize, double delta, double lambda) {
   bool check_grad = false;
   double old_obj = compute_logl(t);
   for (int n_iter = 0; n_iter < ITER; n_iter++) {
-    cout << "\n*** iteration " << n_iter << " ***" << endl;
+    if (verbose) cout << "\n*** iteration " << n_iter << " ***" << endl;
     int t_n = G[t].n_users;
     vector< vector<double> > grad = vector< vector<double> >(t_n, vector<double>(K));
     if (n_iter % 1 == 0) check_grad = true;
@@ -24,8 +24,8 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	double ss = sigmoid(G[t].X[i], G[t].X[j]);
 	if (!G[t].has_predecessor[i]) {	  /* 1.1 for the first time */
 	  for (int k = 0; k < K; k++) {
-//	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] - 1.0/(sigma*sigma) * G[t].X[i][k];
-//	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k] - 1.0/(sigma*sigma) * G[t].X[j][k]; 
+//	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
+//	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k]; 
   	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k];
   	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
 	    grad[i][k] += grad_xik;
@@ -36,9 +36,9 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	  int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
 	  for (int k = 0; k < K; k++) {
 	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] 
-	      - 1.0/(sigma*sigma) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
 	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k]
-	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
+	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    grad[i][k] += grad_xik;
 	    grad[j][k] += grad_xjk;
 	  }
@@ -47,8 +47,8 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	double ss = sigmoid(G[t].X[i], G[t].X[j]);
 	if (!G[t].has_predecessor[i]) {	  /* 2.1 for the first time */
 	  for (int k = 0; k < K; k++) {
-//	    double grad_xik = -ss * G[t].X[j][k] - 1.0/(sigma*sigma) * G[t].X[i][k];
-//	    double grad_xjk = -ss * G[t].X[i][k] - 1.0/(sigma*sigma) * G[t].X[j][k];
+//	    double grad_xik = -ss * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
+//	    double grad_xjk = -ss * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k];
   	    double grad_xik = -ss * G[t].X[j][k];
   	    double grad_xjk = -ss * G[t].X[i][k];
 	    grad[i][k] += grad_xik;
@@ -59,9 +59,9 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	  int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
 	  for (int k = 0; k < K; k++) {
 	    double grad_xik = -ss * G[t].X[j][k] 
-	      - 1.0/(sigma*sigma) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
 	    double grad_xjk = -ss * G[t].X[i][k]
-	      - 1.0/(sigma*sigma) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
+	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
 	    grad[i][k] += grad_xik;
 	    grad[j][k] += grad_xjk;
 	  }
@@ -83,7 +83,7 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
 	tmp_value[i][k] = G[t].X[i][k] + cur_stepsize * grad[i][k];
       }
       double llt = compute_logl_tentative(t, tmp_value);
-      cout << "line search: objective = " << llt << endl;
+      if (verbose) cout << "line search: objective = " << llt << endl;
       if (llt > old_obj) {
 	old_obj = llt;
 	/* update parameters */
@@ -114,7 +114,9 @@ void train_gd(int t, double stepsize, double sigma, double lambda) {
     vector< vector<double> >().swap(grad);
     grad.clear();
 
-    if (fabs((old_obj - com_obj) / com_obj) < 1e-6 && n_iter > 3) 
+//    if (fabs((old_obj - com_obj) / com_obj) < 1e-6 && n_iter > 3) 
+//      break;
+    if ((old_obj - com_obj) / com_obj < 1e-6 && n_iter > 3) 
       break;
   }
 

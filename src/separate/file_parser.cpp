@@ -123,9 +123,9 @@ void read_csv_graph(const char* file_dir) {
 	    pos_users.begin(), pos_users.end(), diff.begin());
 	diff.resize(it - diff.begin());
 
-	if (diff.size() >= pos_users.size()) {
+	if (diff.size() >= pos_users.size()/2) {
 	  random_shuffle(diff.begin(), diff.end());
-	  for (int a = 0; a < pos_users.size(); a++) {
+	  for (int a = 0; a < pos_users.size()/2; a++) {
 	    int j = diff[a];
 	    int encode = i * n_t + j;
 	    G[t].encoded_all.push_back(encode);

@@ -7,5 +7,5 @@
 
 using namespace std;
 
-void train_gd(int t, double stepsize, double sigma, double lambda);
+void train_gd(int t, double stepsize, double delta, double lambda);
 
