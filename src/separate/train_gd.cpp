@@ -11,61 +11,40 @@
 void train_gd(int t, double stepsize, double delta, double lambda) {
   bool check_grad = false;
   double old_obj = compute_logl(t);
-  for (int n_iter = 0; n_iter < ITER; n_iter++) {
+  for (int n_iter = 0; n_iter < M_ITER; n_iter++) {
     if (verbose) cout << "\n*** iteration " << n_iter << " ***" << endl;
     int t_n = G[t].n_users;
     vector< vector<double> > grad = vector< vector<double> >(t_n, vector<double>(K));
     if (n_iter % 1 == 0) check_grad = true;
     double grad_norm = 0;
+    /* iterate all links */
     for (vector<int>::iterator it = G[t].encoded_all.begin(); it != G[t].encoded_all.end(); it++) {
       int e = *it; int i = e/t_n; int j = e%t_n;
+      double ss = sigmoid(G[t].X[i], G[t].X[j]);
       /* gradient ascent */
       if (G[t].graph[i][j] > 0) {     /* 1. positive link */
-	double ss = sigmoid(G[t].X[i], G[t].X[j]);
-	if (!G[t].has_predecessor[i]) {	  /* 1.1 for the first time */
-	  for (int k = 0; k < K; k++) {
-//	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
-//	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k]; 
-  	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k];
-  	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
-	    grad[i][k] += grad_xik;
-	    grad[j][k] += grad_xjk;
-	  }
-	} else {			  /* 1.2 not the first time */
-	  int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
-	  int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
-	  for (int k = 0; k < K; k++) {
-	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] 
-	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
-	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k]
-	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
-	    grad[i][k] += grad_xik;
-	    grad[j][k] += grad_xjk;
-	  }
+	for (int k = 0; k < K; k++) {
+	  double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k];
+	  double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
+	  grad[i][k] += grad_xik;
+	  grad[j][k] += grad_xjk;
 	}
       } else {			      /* 2. negative link */
-	double ss = sigmoid(G[t].X[i], G[t].X[j]);
-	if (!G[t].has_predecessor[i]) {	  /* 2.1 for the first time */
-	  for (int k = 0; k < K; k++) {
-//	    double grad_xik = -ss * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
-//	    double grad_xjk = -ss * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k];
-  	    double grad_xik = -ss * G[t].X[j][k];
-  	    double grad_xjk = -ss * G[t].X[i][k];
-	    grad[i][k] += grad_xik;
-	    grad[j][k] += grad_xjk;
-	  }
-	} else {			  /* 2.2 not the first time */
-	  int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
-	  int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
-	  for (int k = 0; k < K; k++) {
-	    double grad_xik = -ss * G[t].X[j][k] 
-	      - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
-	    double grad_xjk = -ss * G[t].X[i][k]
-	      - 1.0/(delta*delta) * (G[t].X[j][k] - (1-lambda) * G[t-1].X[old_j][k] - lambda * G[t-1].ave[old_j][k]);
-	    grad[i][k] += grad_xik;
-	    grad[j][k] += grad_xjk;
-	  }
+	for (int k = 0; k < K; k++) {
+	  double grad_xik = -ss * G[t].X[j][k];
+	  double grad_xjk = -ss * G[t].X[i][k];
+	  grad[i][k] += grad_xik;
+	  grad[j][k] += grad_xjk;
 	}
+      }
+    }
+
+    /* iterate all users (regularization) */
+    for (int i = 0; i < t_n; i++) if (G[t].has_predecessor[i]) {
+      int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
+      for (int k = 0; k < K; k++) {
+	double grad_xik = - 1.0/(delta*delta) * (G[t].X[i][k] - (1-lambda) * G[t-1].X[old_i][k] - lambda * G[t-1].ave[old_i][k]);
+	grad[i][k] += grad_xik;
       }
     }
 
@@ -114,9 +93,7 @@ void train_gd(int t, double stepsize, double delta, double lambda) {
     vector< vector<double> >().swap(grad);
     grad.clear();
 
-//    if (fabs((old_obj - com_obj) / com_obj) < 1e-6 && n_iter > 3) 
-//      break;
-    if ((old_obj - com_obj) / com_obj < 1e-6 && n_iter > 3) 
+    if (fabs((old_obj - com_obj) / com_obj) < 1e-6 && n_iter > 3) 
       break;
   }
 

@@ -2,9 +2,8 @@
 
 
 /* E-step */
-vector<double> e_step(int t) {
+void e_step(int t) {
   int t_n = G[t].n_users;
-  vector<double> v = vector<double>(t_n);
   double alpha1 = 0, alpha2 = 0;
   double alpha_t = alpha_s[t];
   for (int i = 0; i < t_n; i++) {
@@ -18,10 +17,16 @@ vector<double> e_step(int t) {
       double v2 = alpha_t * exp(-ip2 / (2*delta*delta));
       double norm = v1 + v2;
       if (norm != 0) { v1 /= norm; v2 /= norm; }
-      v[i] = v2;
+      /*
+      if (t == 101) 
+	cout << v1 << " " << v2 << " " << alpha_t << endl;
+      int gu; cin >> gu;
+      */
+
+      v[t][i] = v2;
       alpha1 += v1; alpha2 += v2;
-    } else for (int i = 0; i < t_n; i++) {
-      v[i] = 0.5;
+    } else {
+      v[t][i] = 0.5;
     }
   }
   if (alpha2 != 0) {
@@ -33,7 +38,6 @@ vector<double> e_step(int t) {
     alpha_s[t] = 0.5;
   }
 
-  return v;
 }
 
 
@@ -107,59 +111,40 @@ double update_param(int t, vector< vector<double> > grad) {
  *  given the latent variable estimated from the E-step,
  *  compute the gradients w.r.t. model parameters 
  */
-vector< vector<double> > compute_grad(int t, vector<double> v) {
+vector< vector<double> > compute_grad(int t) {
   int t_n = G[t].n_users;
   vector< vector<double> > grad = vector< vector<double> >(t_n, vector<double>(K));
 
+  /* iterate all links */
   for (vector<int>::iterator it = G[t].encoded_all.begin(); it != G[t].encoded_all.end(); it++) {
     int e = *it; int i = e/t_n; int j = e%t_n;
     /* gradient ascent */
+    double ss = sigmoid(G[t].X[i], G[t].X[j]);
     if (G[t].graph[i][j] > 0) {     /* 1. positive link */
-      double ss = sigmoid(G[t].X[i], G[t].X[j]);
-      if (!G[t].has_predecessor[i]) {	  /* 1.1 for the first time */
-	for (int k = 0; k < K; k++) {
-//	    double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
-//	    double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k]; 
-	  double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k];
-	  double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
-	  grad[i][k] += grad_xik;
-	  grad[j][k] += grad_xjk;
-	}
-      } else {			  /* 1.2 not the first time */
-	int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
-	int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
-	for (int k = 0; k < K; k++) {
-	  double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k] 
-	    - 1.0/(delta*delta) * (G[t].X[i][k] - (1-v[i]) * G[t-1].X[old_i][k] - v[i] * G[t-1].ave[old_i][k]);
-	  double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k]
-	    - 1.0/(delta*delta) * (G[t].X[j][k] - (1-v[i]) * G[t-1].X[old_j][k] - v[i] * G[t-1].ave[old_j][k]);
-	  grad[i][k] += grad_xik;
-	  grad[j][k] += grad_xjk;
-	}
+      for (int k = 0; k < K; k++) {
+	double grad_xik = G[t].graph[i][j] * (1 - ss) * G[t].X[j][k];
+	double grad_xjk = G[t].graph[i][j] * (1 - ss) * G[t].X[i][k];
+	grad[i][k] += grad_xik;
+	grad[j][k] += grad_xjk;
       }
-    } else {			      /* 2. negative link */
-      double ss = sigmoid(G[t].X[i], G[t].X[j]);
-      if (!G[t].has_predecessor[i]) {	  /* 2.1 for the first time */
-	for (int k = 0; k < K; k++) {
-//	    double grad_xik = -ss * G[t].X[j][k] - 1.0/(delta*delta) * G[t].X[i][k];
-//	    double grad_xjk = -ss * G[t].X[i][k] - 1.0/(delta*delta) * G[t].X[j][k];
-	  double grad_xik = -ss * G[t].X[j][k];
-	  double grad_xjk = -ss * G[t].X[i][k];
-	  grad[i][k] += grad_xik;
-	  grad[j][k] += grad_xjk;
-	}
-      } else {			  /* 2.2 not the first time */
-	int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
-	int old_j = G[t-1].u_map[G[t].u_invert_map[j]];
-	for (int k = 0; k < K; k++) {
-	  double grad_xik = -ss * G[t].X[j][k] 
-	    - 1.0/(delta*delta) * (G[t].X[i][k] - (1-v[i]) * G[t-1].X[old_i][k] - v[i] * G[t-1].ave[old_i][k]);
-	  double grad_xjk = -ss * G[t].X[i][k]
-	    - 1.0/(delta*delta) * (G[t].X[j][k] - (1-v[i]) * G[t-1].X[old_j][k] - v[i] * G[t-1].ave[old_j][k]);
-	  grad[i][k] += grad_xik;
-	  grad[j][k] += grad_xjk;
-	}
+    } else {			    /* 2. negative link */
+      for (int k = 0; k < K; k++) {
+	double grad_xik = -ss * G[t].X[j][k];
+	double grad_xjk = -ss * G[t].X[i][k];
+	grad[i][k] += grad_xik;
+	grad[j][k] += grad_xjk;
       }
+    }
+  }
+
+  /* iterate all users (regularization) */
+  for (int i = 0; i < t_n; i++) if (G[t].has_predecessor[i]) {
+    int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
+    for (int k = 0; k < K; k++) {
+      double grad_xik = -1.0/(delta*delta) * ( 
+	  (1-v[t][i]) * (G[t].X[i][k] - G[t-1].X[old_i][k])
+	  + v[t][i] * (G[t].X[i][k] - G[t-1].ave[old_i][k]) );
+      grad[i][k] += grad_xik;
     }
   }
 
@@ -178,19 +163,19 @@ void train_em(int t, double stepsize, double delta) {
   bool check_grad = false;
   double new_obj = -1, old_obj = -1, com_obj = -1;
 
-  for (int o_iter = 0; o_iter < 10; o_iter++) {
+  for (int o_iter = 0; o_iter < TOT_ITER; o_iter++) {
     if (verbose) cout << "\n*** outer iteration " << o_iter << " ***" << endl;
 
     /* E-step */
-    vector<double> v = e_step(t);
+    e_step(t);
     cout << "\talpha = " << alpha_s[t] << endl;
 
     /* M-step */
-    for (int n_iter = 0; n_iter < ITER; n_iter++) {
+    for (int n_iter = 0; n_iter < M_ITER; n_iter++) {
       if (verbose) cout << "\t*** iteration " << n_iter << " ***" << endl;
 
       /* calculate grad */
-      vector< vector<double> > grad = compute_grad(t, v);
+      vector< vector<double> > grad = compute_grad(t);
 
       /* update parameters */
       new_obj = update_param(t, grad);
@@ -215,19 +200,15 @@ void train_em(int t, double stepsize, double delta) {
       if (fabs((new_obj - com_obj) / com_obj) < 1e-6 && n_iter > 1) 
         break;
       com_obj = new_obj;
-  //    if ((old_obj - com_obj) / com_obj < 1e-6 && n_iter > 3) 
-  //      break;
     }
 
-    /* clear memory in E-step */
-    vector<double>().swap(v);
-    v.clear();
-
-    if (fabs((old_obj - new_obj) / old_obj) < 1e-6 && o_iter > 1) break;
+    if (fabs((old_obj - new_obj) / old_obj) < 1e-6 && o_iter > 1) 
+      break;
     old_obj = new_obj;
   }
   cout << "final t = " << t << ", alpha = " << alpha_s[t] << endl;
-  int gu; cin >> gu;
+  likel[t] = new_obj;
+//  int gu; cin >> gu;
 
 }
 

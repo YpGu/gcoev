@@ -114,9 +114,6 @@ void read_csv_graph(const char* file_dir) {
 	  pos_users.push_back(j);
 	}
 
-	// test
-//	cout << "--- i = " << i << ", size = " << pos_users.size() << endl; 
-
 	vector<int> diff = vector<int>(n_t);
 	/* TODO: check */
 	vector<int>::iterator it = set_difference(all_users.begin(), all_users.end(), 
@@ -168,8 +165,6 @@ void read_csv_graph(const char* file_dir) {
     }
   }
   cout << "reading 2 done" << endl;
-//  cin >> gu;
-
 }
 
 /**
@@ -199,13 +194,13 @@ map<string, int> read_csv_dict(const char* file_dir) {
  * format: <id> <space> <k1, k2, ... >
  * file_dir example: "./save/"
  */
-void output_hidden(const char* file_dir) {
+void output_hidden(const char* input_file_dir, const char* out_file_dir) {
   map<int, int> id_map;
   if (true) {
     ifstream my_file;
-    string line;
-    my_file.open("../../data/dict/user_id_map.dat");
+    my_file.open(input_file_dir);
     if (my_file) {
+      string line;
       while (getline(my_file, line)) {
 	vector<string> vec_s = split(line, ',');
 	int x = atoi(vec_s[0].c_str());	  // old_id
@@ -219,7 +214,7 @@ void output_hidden(const char* file_dir) {
     }
   }
 
-  string file_prefix = file_dir;
+  string file_prefix = out_file_dir;
   for (int t = start_T; t < T; t++) {
     ofstream my_file; stringstream ss; ss << t;
     string file_suffix = ss.str();
@@ -230,17 +225,34 @@ void output_hidden(const char* file_dir) {
     if (my_file) {
       int n = G[t].n_users;
       for (int i = 0; i < n; i++) {
-	int old_id = G[t].u_invert_map[i];
-	int original_id = id_map[old_id];
-	stringstream ssp1; ssp1 << original_id;
-	string newline = ssp1.str();
-	for (int k = 0; k < K; k++) {
-	  stringstream ssp2; ssp2 << G[t].X[i][k];
-	  string s_xk = ssp2.str();
-	  newline = newline + " " + s_xk;
+	int old_id = G[t].u_invert_map[i];    // global ID (t)
+	if (G[t].has_predecessor[i]) {	      // 1. not the first time
+	  int old_i = G[t-1].u_map[G[t].u_invert_map[i]];	  // local ID (at t-1)
+	  int original_id = id_map[old_id];   // original ID (in the database) 
+	  stringstream ssp1; ssp1 << original_id;
+	  string newline = ssp1.str();
+	  for (int k = 0; k < K; k++) {
+	    stringstream ssp_x; ssp_x << G[t].X[i][k];
+	    stringstream ssp_old; ssp_old << G[t-1].X[old_i][k];
+	    stringstream ssp_ave; ssp_ave << G[t-1].ave[old_i][k];
+	    stringstream ssp_v; ssp_v << v[t][i];
+	    string s_xk = ssp_x.str(), s_old = ssp_old.str(), s_ave = ssp_ave.str(), s_v = ssp_v.str();
+	    newline = newline + " " + s_xk + " " + s_old + " " + s_ave + " " + s_v;
+	  }
+	  newline = newline + "\n";
+	  my_file << newline;
+	} else {			      // 2. for the first time
+	  int original_id = id_map[old_id];   // original ID (in the database)
+	  stringstream ssp1; ssp1 << original_id;
+	  string newline = ssp1.str();
+	  for (int k = 0; k < K; k++) {
+	    stringstream ssp_x; ssp_x << G[t].X[i][k];
+	    string s_xk = ssp_x.str();
+	    newline = newline + " " + s_xk;
+	  }
+	  newline = newline + "\n";
+	  my_file << newline;
 	}
-	newline = newline + "\n";
-	my_file << newline;
       }
 
       my_file.close();
@@ -265,4 +277,18 @@ void output_2d(const char* file_dir, vector< vector<double> > arr, int n1, int n
     }
   }
 }
+
+/* output 1d array to file */
+void output_1d(const char* file_dir, vector<double> arr, int n) {
+  ofstream my_file;
+  my_file.open(file_dir);
+  if (my_file) {
+    for (int i = 0; i < n; i++) {
+      stringstream ss; ss << arr[i];
+      string newline = ss.str() + "\n";
+      my_file << newline;
+    }
+  }
+}
+
 

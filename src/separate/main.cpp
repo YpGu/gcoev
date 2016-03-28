@@ -14,16 +14,34 @@ int main() {
   /* init N, K, T */
   read_csv_graph(&"../../data/graph/"[0u]);
   init();
+  int option = 1;
 
-  /* run */
-  for (int t = start_T; t < T; t++) {
-    cout << "t = " << t << endl;
-//    train(t, stepsize, delta, lambda);
-//    train_gd(t, stepsize, delta, lambda);
-    train_em(t, stepsize, delta);
+  /* train */
+  if (option == 1) {
+    for (int t = start_T; t < T; t++) {
+      cout << "t = " << t << endl;
+  //    train(t, stepsize, delta, lambda);
+      train_gd(t, stepsize, delta, lambda);
+    }
+  }
+  else if (option == 2) {
+    for (int t = start_T; t < T; t++) {
+      cout << "t = " << t << endl;
+      train_em(t, stepsize, delta);
+    }
   }
   cout << "training done!" << endl;
-  output_hidden(&"./save/"[0u]);
+
+  /* save */
+  if (option == 1) {
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/"[0u]);
+    output_1d(&"./tmp/alpha.txt"[0u], alpha_s, T);
+    output_1d(&"./tmp/likelihood.txt"[0u], likel, T);
+  }
+  else if (option == 2) {
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save_baseline/"[0u]);
+    output_1d(&"./tmp/likelihood_baseline.txt"[0u], likel, T);
+  }
 
 }
 

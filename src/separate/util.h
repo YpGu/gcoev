@@ -14,7 +14,8 @@ using namespace std;
 extern int K;	      // number of latent dimension
 extern int T;	      // total number of timestamps
 extern int start_T;   // starting time stamp
-extern int ITER;      // total number of iterations
+extern int TOT_ITER;  // total number of iterations
+extern int M_ITER;    // number of iterations (inside M-step)
 extern bool verbose;  // do you want to see more outputs?
 
 extern double stepsize;
@@ -44,6 +45,8 @@ struct sub_graph {
 
 extern vector<struct sub_graph> G;	      // T*1
 extern vector<double> alpha_s;		      // T*1
+extern vector<double> likel;		      // T*1
+extern vector< vector<double> > v;	      // T*n: latent assignment 
 
 #endif
 

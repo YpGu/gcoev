@@ -10,7 +10,7 @@
  */
 void train(int t, double stepsize, double delta, double lambda) {
   bool check_grad = false;
-  for (int n_iter = 0; n_iter < ITER; n_iter++) {
+  for (int n_iter = 0; n_iter < M_ITER; n_iter++) {
     cout << "*** iteration " << n_iter << " ***" << endl;
     if (n_iter % 10 == 0) 
       check_grad = true;
