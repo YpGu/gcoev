@@ -25,8 +25,9 @@ void read_csv_graph(const char* file_dir) {
   G = vector< struct sub_graph >(T);
 
   // read user map (for each t)
+  cout << "t = ";
   for (int t = start_T; t < T; t++) {
-    cout << "t = " << t << endl;
+    cout << t << " ";
     ifstream my_file; stringstream ss; ss << t; string file_suffix = ss.str();
     string file_name = file_prefix + file_suffix + ".csv";
     if (verbose) cout << file_name << endl;
@@ -69,8 +70,9 @@ void read_csv_graph(const char* file_dir) {
   cout << "reading 1 done" << endl;
 
   /* read G & initialize G */
+  cout << "t = ";
   for (int t = start_T; t < T; t++) {
-    cout << "t = " << t << endl;
+    cout << t << " ";
     ifstream my_file; stringstream ss; ss << t;
     string file_suffix = ss.str();
     string file_name = file_prefix + file_suffix + ".csv";
