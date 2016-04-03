@@ -2,6 +2,7 @@
 
 int K = 1;
 int T = 114;	// co-voting dataset
+//int T = 63;	// co-voting dataset
 int start_T = 0;
 int TOT_ITER = 50;
 int M_ITER = 30;

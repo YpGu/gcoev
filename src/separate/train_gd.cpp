@@ -10,7 +10,7 @@
  */
 void train_gd(int t, double stepsize, double delta, double lambda) {
   bool check_grad = false;
-  double old_obj = compute_logl(t);
+  double old_obj = compute_logl(t), new_obj;
   for (int n_iter = 0; n_iter < M_ITER; n_iter++) {
     if (verbose) cout << "\n*** iteration " << n_iter << " ***" << endl;
     int t_n = G[t].n_users;
@@ -80,8 +80,8 @@ void train_gd(int t, double stepsize, double delta, double lambda) {
 
     /* next iteration of stochastic gradient ascent */
     if (n_iter % 1 == 0) {
-      double llt = compute_logl(t);
-      cout << "log likelihood at time " << t << " (iter " << n_iter << ") = " << llt << endl;
+      new_obj = compute_logl(t);
+      cout << "log likelihood at time " << t << " (iter " << n_iter << ") = " << new_obj << endl;
     }
     if (check_grad) {
       check_grad = false;
@@ -123,6 +123,8 @@ void train_gd(int t, double stepsize, double delta, double lambda) {
   /* free */
   vector<int>().swap(degree);
   degree.clear();
+
+  likel[t] = new_obj;
 
 }
 

@@ -12,15 +12,15 @@ int main() {
 //  srand(time(NULL));
 
   /* init N, K, T */
-  read_csv_graph(&"../../data/graph/"[0u]);
+  read_csv_graph(&"../../data/jsim_graph_selected/"[0u]);
   init();
-  int option = 1;
+  int option = 1;   // no em
+//  int option = 2;   // em
 
   /* train */
   if (option == 1) {
     for (int t = start_T; t < T; t++) {
       cout << "t = " << t << endl;
-  //    train(t, stepsize, delta, lambda);
       train_gd(t, stepsize, delta, lambda);
     }
   }
@@ -34,13 +34,13 @@ int main() {
 
   /* save */
   if (option == 1) {
-    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/"[0u]);
-    output_1d(&"./tmp/alpha.txt"[0u], alpha_s, T);
-    output_1d(&"./tmp/likelihood.txt"[0u], likel, T);
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/baseline_0/"[0u]);
+    output_1d(&"./save/baseline_0/likelihood.txt"[0u], likel, T);
   }
   else if (option == 2) {
-    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save_baseline/"[0u]);
-    output_1d(&"./tmp/likelihood_baseline.txt"[0u], likel, T);
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/"[0u]);
+    output_1d(&"./save/lfpm/alpha.txt"[0u], alpha_s, T);
+    output_1d(&"./save/lfpm/likelihood.txt"[0u], likel, T);
   }
 
 }

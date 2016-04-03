@@ -17,12 +17,13 @@ def read_dict():
             label[old_id] = 1
     fin.close()
 
-def classification():
+def classification(file_prefix):
     read_dict()
     for i in range(120):    # year
         predict = {}
         n_pos = 0.0; n_neg = 0.0
-        filename = './save/' + str(i) + '.txt'
+#        filename = './save/baseline_0/' + str(i) + '.txt'
+        filename = file_prefix + str(i) + '.txt'
         if not os.path.isfile(filename):
             continue
         fin = open(filename)
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     jump = int(sys.argv[3])
     print '-------\nsorting may be a problem: lots of identical values\n-------'
     '''
-    print 't\tauc \t classification'
-    classification()
+#    print 't\tauc \t classification'
+    classification(sys.argv[1])
 
 

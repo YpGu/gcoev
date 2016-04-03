@@ -17,11 +17,6 @@ void e_step(int t) {
       double v2 = alpha_t * exp(-ip2 / (2*delta*delta));
       double norm = v1 + v2;
       if (norm != 0) { v1 /= norm; v2 /= norm; }
-      /*
-      if (t == 101) 
-	cout << v1 << " " << v2 << " " << alpha_t << endl;
-      int gu; cin >> gu;
-      */
 
       v[t][i] = v2;
       alpha1 += v1; alpha2 += v2;
@@ -31,7 +26,6 @@ void e_step(int t) {
   }
   if (alpha2 != 0) {
     alpha_s[t] = alpha2 / (alpha1 + alpha2);
-//    cout << "alpha updated to " << alpha_s[t] << endl;
   } else if (alpha1 != 0) {
     alpha_s[t] = 0;
   } else {
@@ -47,17 +41,17 @@ void e_step(int t) {
  *  based on the gradient computed in the previous step
  * returns the objective after update
  */
-double update_param(int t, vector< vector<double> > grad) {
+double update_param(int t, vector< vector<double> > grad, vector<double> v) {
   int t_n = G[t].n_users;
   double cur_stepsize = stepsize;
-  double old_obj = compute_logl(t);
+  double old_obj = compute_logl_lower(t, v);
   for (int iter = 0; iter < 20; iter++) {
     vector< vector<double> > tmp_value = vector< vector<double> >(t_n, vector<double>(K));
     for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
       tmp_value[i][k] = G[t].X[i][k] + cur_stepsize * grad[i][k];
     }
-    double llt = compute_logl_tentative(t, tmp_value);
-    if (verbose) cout << "line search: objective = " << llt << endl;
+    double llt = compute_logl_lower_tentative(t, tmp_value, v);
+    if (verbose) cout << "\tline search: objective = " << llt << endl;
     if (llt > old_obj) {
       old_obj = llt;
       /* update parameters */
@@ -178,7 +172,7 @@ void train_em(int t, double stepsize, double delta) {
       vector< vector<double> > grad = compute_grad(t);
 
       /* update parameters */
-      new_obj = update_param(t, grad);
+      new_obj = update_param(t, grad, v[t]);
       if (n_iter % 1 == 0) 
 	cout << "\tlog likelihood at time " << t << " (iter " << n_iter << ") = " << new_obj << endl;
 
