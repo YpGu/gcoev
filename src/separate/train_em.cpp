@@ -173,7 +173,7 @@ void train_em(int t, double stepsize, double delta) {
 
       /* update parameters */
       new_obj = update_param(t, grad, v[t]);
-      if (n_iter % 1 == 0) 
+      if (n_iter % 10 == 0) 
 	cout << "\tlog likelihood at time " << t << " (iter " << n_iter << ") = " << new_obj << endl;
 
       /* check gradient */

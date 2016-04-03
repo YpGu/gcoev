@@ -14,8 +14,8 @@ int main() {
   /* init N, K, T */
   read_csv_graph(&"../../data/jsim_graph_selected/"[0u]);
   init();
-  int option = 1;   // no em
-//  int option = 2;   // em
+//  int option = 1;   // no em
+  int option = 2;   // em
 
   /* train */
   if (option == 1) {
