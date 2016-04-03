@@ -38,7 +38,7 @@ int main() {
     output_1d(&"./save/baseline_0/likelihood.txt"[0u], likel, T);
   }
   else if (option == 2) {
-    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/"[0u]);
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/lfpm/"[0u]);
     output_1d(&"./save/lfpm/alpha.txt"[0u], alpha_s, T);
     output_1d(&"./save/lfpm/likelihood.txt"[0u], likel, T);
   }
