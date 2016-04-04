@@ -79,8 +79,8 @@ void train_gd(int t, double stepsize, double delta, double lambda) {
     }
 
     /* next iteration of stochastic gradient ascent */
+    new_obj = compute_logl(t);
     if (n_iter % 10 == 0) {
-      new_obj = compute_logl(t);
       cout << "log likelihood at time " << t << " (iter " << n_iter << ") = " << new_obj << endl;
     }
     if (check_grad) {

@@ -145,6 +145,31 @@ vector< vector<double> > compute_grad(int t) {
   return grad;
 }
 
+/*
+ * flip:
+ *  try flipping the sign of model parameters;
+ *  flip the sign if a better objective can be achieved
+ */
+void flip(int t, vector< vector<double> > v) {
+  int t_n = G[t].n_users;
+  vector< vector<double> > tmp_value = vector< vector<double> >(t_n, vector<double>(K));
+  for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
+    tmp_value[i][k] = -G[t].X[i][k];
+  }
+  double obj1 = compute_logl_lower(t, v[t]);
+  double obj2 = compute_logl_lower_tentative(t, tmp_value, v[t]);
+  if (obj2 > obj1) {
+    for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
+      G[t].X[i][k] = -G[t].X[i][k];
+    }
+    cout << "fliped!" << endl;
+  }
+  vector< vector<double> >().swap(tmp_value);
+  tmp_value.clear();
+
+  return;
+}
+
 
 /**
  * train_em: update the latent features for each time stamp t
@@ -159,6 +184,10 @@ void train_em(int t, double stepsize, double delta) {
 
   for (int o_iter = 0; o_iter < TOT_ITER; o_iter++) {
     if (verbose) cout << "\n*** outer iteration " << o_iter << " ***" << endl;
+
+    if (o_iter == 1) {
+      flip(t, v);
+    }
 
     /* E-step */
     e_step(t);
