@@ -1,8 +1,11 @@
 # classification on users
+# only on users who stay in congress for > 1 term
+
 import os.path
 import sys
 
 label = {}
+udict = {}  # new_id -> old_id
 
 def read_dict():
     fin = open('../../data/dict/user_info.dat')
@@ -17,9 +20,39 @@ def read_dict():
             label[old_id] = 1
     fin.close()
 
+def read_id_transform():
+    fin = open('../../data/dict/user_id_map.dat')
+    lines = fin.readlines()
+    for line in lines:
+        ls = line.split(',')
+        old_id = int(ls[1])
+        new_id = int(ls[0])
+        udict[new_id] = old_id
+    fin.close()
+
+# has prodecessor
+def read_dict_year(year):
+    label_y = {}
+    filename = '../../data/dict/has_prodecessor/' + str(year) + '.txt'
+    if not os.path.isfile(filename):
+        return {}
+    fin = open(filename)
+    lines = fin.readlines()
+    for line in lines:
+        new_id = int(line)
+        old_id = udict[new_id]
+        if old_id in label:
+            label_y[old_id] = label[old_id]
+    fin.close()
+
+    return label_y
+
 def classification(file_prefix):
     read_dict()
+    read_id_transform()
+
     for i in range(120):    # year
+        label_y = read_dict_year(i)
         predict = {}
         n_pos = 0.0; n_neg = 0.0
 #        filename = './save/baseline_0/' + str(i) + '.txt'
@@ -32,9 +65,9 @@ def classification(file_prefix):
         for line in lines:
             ls = line.split(' ')
             old_id = int(ls[0])
-            if old_id not in label:
+#            if old_id not in label:
+            if old_id not in label_y:
                 continue
-#                k = float(ls[1]) + float(ls[2])
             k = float(ls[1])
             if old_id in predict:
                 predict[old_id] += k
@@ -47,7 +80,6 @@ def classification(file_prefix):
                 n_neg += 1
         fin.close()
         print i,
-#        print n_pos, n_neg,
 
         # auc
         newX = 0.0; newY = 0.0; oldX = 0.0; oldY = 0.0; auc = 0.0
@@ -60,9 +92,6 @@ def classification(file_prefix):
                 newX += 1/n_neg
             auc += newY * (newX - oldX)
             oldX = newX; oldY = newY
-#            print label[old_id],
-#        gu = raw_input()
-#        print newX, newY,
         if auc < 0.5:
             auc = 1-auc
         print auc,
@@ -73,10 +102,13 @@ def classification(file_prefix):
             if label[old_id] * predict[old_id] > 0:
                 cor += 1
             tot += 1
-        acc = cor/tot
-        if acc < 0.5:
-            acc = 1-acc
-        print acc
+        if tot != 0:
+            acc = cor/tot
+            if acc < 0.5:
+                acc = 1-acc
+            print acc
+        else:
+            print ''
 
 if __name__ == '__main__':
     '''
