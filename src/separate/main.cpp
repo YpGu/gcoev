@@ -14,19 +14,21 @@ int main() {
   /* init N, K, T */
   read_csv_graph(&"../../data/jsim_graph_selected/"[0u]);
   init();
-//  int option = 1;   // no em
-  int option = 2;   // em
+  int option = 1;   // no em
+//  int option = 2;   // em
 
   /* train */
   if (option == 1) {
     for (int t = start_T; t < T; t++) {
       cout << "t = " << t << endl;
+      init_gd(t);
       train_gd(t, stepsize, delta, lambda);
     }
   }
   else if (option == 2) {
     for (int t = start_T; t < T; t++) {
       cout << "t = " << t << endl;
+      init_em(t);
       train_em(t, stepsize, delta);
     }
   }

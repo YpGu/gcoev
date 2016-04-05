@@ -1,4 +1,24 @@
-#include "train_gd.h"
+#include "train_em.h"
+
+
+/**
+ * init_em:
+ *  in order to avoid the flipping issue, the latent features at t
+ *  are initialized to be related to those at t-1
+ */
+void init_em(int t) {
+  int t_n = G[t].n_users;
+  for (int i = 0; i < t_n; i++) {
+    if (G[t].has_predecessor[i]) {  /* not the first time */
+      int old_i = G[t-1].u_map[G[t].u_invert_map[i]];
+      for (int k = 0; k < K; k++) {
+	G[t].X[i][k] = 0.5 * G[t-1].X[old_i][k] + 0.5 * G[t-1].ave[old_i][k];
+      }
+    }
+  }
+
+  return;
+}
 
 
 /* E-step */
@@ -32,11 +52,12 @@ void e_step(int t) {
     alpha_s[t] = 0.5;
   }
 
+  return;
 }
 
 
 /**
- * update_param: 
+ * update_param (M-step): 
  *  update model parameter using line search,
  *  based on the gradient computed in the previous step
  * returns the objective after update
@@ -101,7 +122,7 @@ double update_param(int t, vector< vector<double> > grad, vector<double> v) {
 
 
 /** 
- * compute_grad: 
+ * compute_grad (M-step): 
  *  given the latent variable estimated from the E-step,
  *  compute the gradients w.r.t. model parameters 
  */
@@ -185,9 +206,7 @@ void train_em(int t, double stepsize, double delta) {
   for (int o_iter = 0; o_iter < TOT_ITER; o_iter++) {
     if (verbose) cout << "\n*** outer iteration " << o_iter << " ***" << endl;
 
-    if (o_iter == 1) {
-      flip(t, v);
-    }
+//    if (o_iter == 1) flip(t, v);
 
     /* E-step */
     e_step(t);
@@ -233,5 +252,7 @@ void train_em(int t, double stepsize, double delta) {
   likel[t] = new_obj;
 //  int gu; cin >> gu;
 
+  return;
 }
+
 
