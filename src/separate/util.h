@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <limits>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -21,6 +22,8 @@ extern bool verbose;  // do you want to see more outputs?
 extern double stepsize;
 extern double delta;	  // variance
 extern double lambda;	  // (1-lambda) * self + lambda * ave_neighbor
+extern char* outdir;	  // output directory
+extern int option;	  // 1: no em; 2: with em
 
 /* graph information for each time stamp */
 struct sub_graph {

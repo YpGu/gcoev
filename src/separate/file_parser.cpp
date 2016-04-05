@@ -1,5 +1,6 @@
 #include "file_parser.h"
 
+
 vector<string> &split(const string &s, char delim, vector<string> &elems) {
   stringstream ss(s);
   string item;
@@ -9,11 +10,23 @@ vector<string> &split(const string &s, char delim, vector<string> &elems) {
   return elems;
 }
 
+
 vector<string> split(const string &s, char delim) {
   vector<string> elems;
   split(s, delim, elems);
   return elems;
 }
+
+
+bool isDirectory(char* path) {
+  struct stat s;
+  if (stat(path, &s) == 0) {
+    return s.st_mode & S_IFDIR;
+  } else {
+    return false;
+  }
+}
+
 
 /** 
  * read graph in csv format
@@ -169,6 +182,7 @@ void read_csv_graph(const char* file_dir) {
   cout << "reading 2 done" << endl;
 }
 
+
 /**
  * read id dictionary in csv format
  * dictionary file: <old_id>,<new_id>
@@ -190,6 +204,7 @@ map<string, int> read_csv_dict(const char* file_dir) {
   }
   return id_map;
 }
+
 
 /**
  * output X to a file
@@ -279,6 +294,7 @@ void output_2d(const char* file_dir, vector< vector<double> > arr, int n1, int n
     }
   }
 }
+
 
 /* output 1d array to file */
 void output_1d(const char* file_dir, vector<double> arr, int n) {

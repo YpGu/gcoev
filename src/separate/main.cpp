@@ -6,16 +6,15 @@
 #include "train_gd.h"
 #include "train_em.h"
 
-int main() {
+int main(int argc, char* argv[]) {
 
-  srand(0);
-//  srand(time(NULL));
+  if (!config(argc, argv)) {
+    return 0;
+  }
 
   /* init N, K, T */
   read_csv_graph(&"../../data/jsim_graph_selected/"[0u]);
   init();
-  int option = 1;   // no em
-//  int option = 2;   // em
 
   /* train */
   if (option == 1) {
@@ -36,13 +35,21 @@ int main() {
 
   /* save */
   if (option == 1) {
-    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/baseline_0/"[0u]);
-    output_1d(&"./save/baseline_0/likelihood.txt"[0u], likel, T);
+    char* c_likel = "likelihood.txt";
+//    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/baseline_0/"[0u]);
+//    output_1d(&"./save/baseline_0/likelihood.txt"[0u], likel, T);
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], outdir);
+    output_1d(strcat(outdir, c_likel), likel, T);  // likelihood
   }
   else if (option == 2) {
-    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/lfpm/"[0u]);
-    output_1d(&"./save/lfpm/alpha.txt"[0u], alpha_s, T);
-    output_1d(&"./save/lfpm/likelihood.txt"[0u], likel, T);
+    char* c_alpha = "alpha.txt";
+    char* c_likel = "likelihood.txt";
+//    output_hidden(&"../../data/dict/user_id_map.dat"[0u], &"./save/lfpm/"[0u]);
+//    output_1d(&"./save/lfpm/alpha.txt"[0u], alpha_s, T);
+//    output_1d(&"./save/lfpm/likelihood.txt"[0u], likel, T);
+    output_hidden(&"../../data/dict/user_id_map.dat"[0u], outdir);
+    output_1d(strcat(outdir, c_alpha), alpha_s, T);
+    output_1d(strcat(outdir, c_likel), likel, T);
   }
 
 }

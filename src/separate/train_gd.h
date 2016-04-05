@@ -8,4 +8,5 @@
 using namespace std;
 
 void train_gd(int t, double stepsize, double delta, double lambda);
+void init_gd(int t);
 

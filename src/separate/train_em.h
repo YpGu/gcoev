@@ -8,4 +8,5 @@
 using namespace std;
 
 void train_em(int t, double stepsize, double delta);
+void init_em(int t);
 
