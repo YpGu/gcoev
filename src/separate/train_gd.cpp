@@ -27,16 +27,16 @@ void init_gd(int t) {
  *  based on the gradient computed in the previous step
  * returns the objective after update
  */
-double update_param_gd(int t, vector< vector<double> > grad, vector<double> v) {
+double update_param_gd(int t, vector< vector<double> > grad) {
   int t_n = G[t].n_users;
   double cur_stepsize = stepsize;
-  double old_obj = compute_logl_lower(t, v);
+  double old_obj = compute_logl(t);
   for (int iter = 0; iter < 20; iter++) {
     vector< vector<double> > tmp_value = vector< vector<double> >(t_n, vector<double>(K));
     for (int i = 0; i < t_n; i++) for (int k = 0; k < K; k++) {
       tmp_value[i][k] = G[t].X[i][k] + cur_stepsize * grad[i][k];
     }
-    double llt = compute_logl_lower_tentative(t, tmp_value, v);
+    double llt = compute_logl_tentative(t, tmp_value);
     if (verbose) cout << "\tline search: objective = " << llt << endl;
     if (llt > old_obj) {
       old_obj = llt;
@@ -149,7 +149,7 @@ void train_gd(int t, double stepsize, double delta, double lambda) {
     vector< vector<double> > grad = compute_grad_gd(t, lambda);
 
     /* update parameters */
-    new_obj = update_param_gd(t, grad, v[t]);
+    new_obj = update_param_gd(t, grad);
     if (n_iter % 10 == 0) 
       cout << "\tlog likelihood at time " << t << " (iter " << n_iter << ") = " << new_obj << endl;
 

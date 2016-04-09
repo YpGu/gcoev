@@ -1,9 +1,8 @@
 #include "util.h"
 
 int K = 1;
-//int T = 114;	// co-voting dataset
-int T = 87;
-int start_T = 85;
+int T = 114;	// co-voting dataset
+int start_T = 82;     // 1951-1953
 int TOT_ITER = 50;
 int M_ITER = 200;
 bool verbose = false;
