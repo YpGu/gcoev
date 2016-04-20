@@ -181,4 +181,16 @@ public class Operations {
     return _sample;
   }
 
+
+  /**
+   * calculate the inner product of two vectors
+   */
+  public static double
+  inner_product(double[] arr1, double[] arr2, int dim) {
+    double res = 0;
+    for (int i = 0; i < dim; i++) 
+      res += arr1[i] * arr2[i];
+    return res;
+  }
+
 }

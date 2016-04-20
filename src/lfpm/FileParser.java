@@ -53,13 +53,15 @@ public class FileParser {
 	int x = idMap.get(id1);		// local_id1 
 	int y = idMap.get(id2);		// local_id2
 	G[x][y] = 1.0; G[y][x] = 1.0;
-	A[x][y] = (1-Main.lambda) / freq.get(id1);
-	A[y][x] = (1-Main.lambda) / freq.get(id2);
+//	A[x][y] = (1-Main.lambda) / freq.get(id1);
+//	A[y][x] = (1-Main.lambda) / freq.get(id2);
+	A[x][y] = 1.0 / freq.get(id1);
+	A[y][x] = 1.0 / freq.get(id2);
       }
-      int n = idMap.size();
-      for (int x = 0; x < n; x++) {
-	A[x][x] = Main.lambda;
-      }
+//      int n = idMap.size();
+//      for (int x = 0; x < n; x++) {
+//	A[x][x] = Main.lambda;
+//      }
     } catch (IOException e) {
       e.printStackTrace();
     }
