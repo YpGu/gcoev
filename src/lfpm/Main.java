@@ -10,7 +10,8 @@ public class Main {
   public static double sigma = 0.3;
   public static double delta = 0.3;
   public static double scale = 0.2;
-  public static double eps = 1e-6;   // avoid sigular 
+  public static double eps = 1e-6;    // avoid sigular 
+  public static int N_SAMPLES = 20;   // number of samples from multi-variate normal distribution
   public static Random rand = new Random(0);
 
   /* global data */
@@ -141,47 +142,74 @@ public class Main {
     /* outer for-loop */
     for (int iter = 0; iter < 10; iter++) {
       /* intrinsic feature */
-      forward1();
-      backward1();
+      forward1(true);
+      backward1(true);
       /* gradient descent */
       compute_gradient1(iter);
       /* inner for-loop here */
       for (int inner_iter = 0; inner_iter < 20; inner_iter++) {
-	double lr = 0.005;
+	double lr = 0.001;
+	/* update \hat{h} using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
 	  int n = NS.get(t);
-	  double[][] h_t = h_s.get(t);
 	  double[][] h_hat_t = h_hat_s.get(t);
 	  double[][] grad_h_hat_t = grad_h_hat_s.get(t);
 	  for (int i = 0; i < n; i++) {
-//	    h_t[i][0] += lr * grad_h_hat_t[i][0];
 	    h_hat_t[i][0] += lr * grad_h_hat_t[i][0];
 	  }
 	  h_hat_s.set(t, h_hat_t);
 	}
-	/* update mu? */
-	forward1(); backward1();
+	/* update mu and V, since both are function of h */
+	forward1(false); backward1(false);
 
 	double obj1 = compute_objective1();
-	System.out.println("iter " + inner_iter + " obj 1 = " + obj1);
+	System.out.println("(1) iter = " + inner_iter + ", obj 1 = " + obj1);
       }
-      /* update(sample) h */
-      for (int t = 0; t < T-t0; t++) {
-	double[][] h_t = h_s.get(t);
-	double[][] h_hat_t = h_hat_s.get(t);
-	for (int i = 0; i < h_t.length; i++) 
-	  h_t[i] = h_hat_t[i];
-	h_s.set(t, h_t);
-      }
-
-      /* ------------------------------- */
 
       /* impression feature */
-      forward2();
-      backward2();
+      forward2(true); backward2(true);
       /* gradient descent */
       compute_gradient2();
       /* inner for-loop here */
+      for (int inner_iter = 0; inner_iter < 20; inner_iter++) {
+	double lr = 0.001;
+	/* update \hat{h} using gradient descent */
+	for (int t = 0; t < T-t0; t++) {
+	  int n = NS.get(t);
+	  double[][] h_hat_prime_t = h_hat_prime_s.get(t);
+	  double[][] grad_h_hat_prime_t = grad_h_hat_prime_s.get(t);
+	  for (int i = 0; i < n; i++) {
+	    h_hat_prime_t[i][0] += lr * grad_h_hat_prime_t[i][0];
+	  }
+	  h_hat_s.set(t, h_hat_prime_t);
+	}
+	/* update mu' and V', since both are function of h' */
+	forward2(false); backward2(false);
+
+	double obj2 = compute_objective2();
+	System.out.println("(2) iter = " + inner_iter + ", obj 2 = " + obj2);
+      }
+
+
+      /* sample and update */
+      forward1(false); backward1(false);
+      forward2(false); backward2(false);
+      for (int t = 0; t < T-t0; t++) {
+	double[] samples = Operations.sample_multivariate_normal(mu_hat_s.get(t), v_hat_s.get(t), N_SAMPLES);
+	double[][] h_s_arr = new double[samples.length][1];
+	for (int i = 0; i < samples.length; i++) {
+	  h_s_arr[i][0] = samples[i];
+	}
+	h_s.set(t, h_s_arr);
+      }
+      for (int t = 0; t < T-t0; t++) {
+	double[] samples = Operations.sample_multivariate_normal(mu_hat_prime_s.get(t), v_hat_prime_s.get(t), N_SAMPLES);
+	double[][] h_s_arr = new double[samples.length][1];
+	for (int i = 0; i < samples.length; i++) {
+	  h_s_arr[i][0] = samples[i];
+	}
+	h_prime_s.set(t, h_s_arr);
+      }
     }
   }
 
@@ -195,6 +223,10 @@ public class Main {
     return v_max + Math.log(ins_log);
   }
 
+  /**
+   * compute_objective1:
+   *  return the lower bound when h' is fixed
+   */
   public static double compute_objective1() {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
@@ -260,7 +292,7 @@ public class Main {
     double[][] tmp_grad_h_hat_s = new double[T-t0][1000];
 
     for (int t = 0; t < T-t0; t++) {
-      System.out.println("compute gradient 1, t = " + t);
+//      System.out.println("compute gradient 1, t = " + t);
       int n = NS.get(t);
       double delta_t = delta_s.get(t);
       double[][] G_t = GS.get(t);
@@ -355,6 +387,74 @@ public class Main {
     FileParser.output(grad_h_hat_s, "./grad/grad_" + iteration + ".txt");
 
     return;
+  }
+
+  /**
+   * compute_objective2:
+   *  return the lower bound when h is fixed
+   */
+  public static double compute_objective2() {
+    double res = 0;
+    for (int t = 0; t < T-t0; t++) {
+      if (t != 0) {
+	int n = NS.get(t);
+	double[][] G_t = GS.get(t);
+	double[][] h_t = h_s.get(t);
+	double[][] h_pre_t = Operations.translate(h_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double[] mu_hat_prime_t = mu_hat_prime_s.get(t);
+	double[] mu_hat_prime_pre_t = Operations.translate(mu_hat_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double delta_t = delta_s.get(t);
+	int[][] neg_sam_t = neg_samples.get(t);
+
+	for (int i = 0; i < n; i++) {
+	  /* first term */
+	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
+	    List<Double> powers = new ArrayList<Double>();
+	    for (int _l = 0; _l < NEG; _l++) {
+	      int l = neg_sam_t[i][_l];
+	      powers.add(h_t[i][0] * mu_hat_prime_t[l]
+		  + 0.5 * h_t[i][0] * h_t[i][0] * delta_t * delta_t);
+	    }
+	    double lse = log_sum_exp(powers);
+	    res += G_t[i][j] * (h_t[i][0] * mu_hat_prime_t[j] - lse);
+	  }
+	  /* second term */
+	  double weighted_neighbor = 0, degree = 0;
+	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
+	    weighted_neighbor += mu_hat_prime_pre_t[j];
+	    degree += 1;
+	  }
+	  if (degree != 0) weighted_neighbor /= degree;
+	  double diff = h_t[i][0] - (1-lambda) * h_pre_t[i][0] - lambda * weighted_neighbor;
+	  res -= 0.5 * diff * diff / (sigma*sigma);
+	  /* third term */
+	  double diff_3 = mu_hat_prime_t[i] - mu_hat_prime_pre_t[i];
+	  res -= 0.5 * diff_3 * diff_3 / (sigma*sigma);
+	}
+      } else {
+	int n = NS.get(t);
+	double[][] G_t = GS.get(t);
+	double[][] h_t = h_s.get(t);
+	double[] mu_hat_prime_t = mu_hat_prime_s.get(t);
+	double delta_t = delta_s.get(t);
+	int[][] neg_sam_t = neg_samples.get(t);
+
+	for (int i = 0; i < n; i++) {
+	  /* first term */
+	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
+	    List<Double> powers = new ArrayList<Double>();
+	    for (int _l = 0; _l < NEG; _l++) {
+	      int l = neg_sam_t[i][_l];
+	      powers.add(h_t[i][0] * mu_hat_prime_t[l]
+		  + 0.5 * h_t[i][0] * h_t[i][0] * delta_t * delta_t);
+	    }
+	    double lse = log_sum_exp(powers);
+	    res += G_t[i][j] * (h_t[i][0] * mu_hat_prime_t[j] - lse);
+	  }
+	}
+      }
+    }
+    return res;
   }
 
   public static void compute_gradient2() {
@@ -485,20 +585,20 @@ public class Main {
     return;
   }
 
-  /* 
+  /** 
    * forward pass 1: update intrinsic features 
    *  (1) mu (mu_s) 
    *  (2) grad_mu (grad_mu_s) 
    *  (3) variance V (v_s)
    */
-  public static void forward1() {
+  public static void forward1(boolean update_grad) {
     for (int t1 = t0; t1 < T; t1++) {
       int t = t1-t0;
-      System.out.println("forward 1;\tt = " + t1);
+//      System.out.println("forward 1;\tt = " + t1);
       if (t != 0) {
 	int n_pre = NS.get(t-1);	      // N_{t-1}
 	int n = NS.get(t);		      // N_t
-	double delta_t = delta_s.get(t);	      // delta_t
+	double delta_t = delta_s.get(t);      // delta_t
 	Matrix a = new Matrix(AS.get(t-1));   // A^{t-1}
 	Matrix mu_pre_t = new Matrix(mu_s.get(t-1));   // mu^{t-1}
 	Matrix V_pre_t = new Matrix(v_s.get(t-1));     // V^{t-1}
@@ -519,7 +619,7 @@ public class Main {
 	v_s.set(t, V_t.getArray());
 
 	/* calculate and update grad_mu */
-	for (int s = 0; s < T-t0; s++) {
+	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  Matrix delta_ts = (t == s) ? Matrix.identity(n_pre, 1) : new Matrix(n_pre, 1);
 	  Matrix grad_mu_pre_t = new Matrix(grad_mu_s.get((t-1) * (T-t0) + s));   // (\part \mu^{t-1}) / (\part \hat{h}^{s}) 
 	  Matrix grad_part_1 = grad_mu_pre_t.times(1-lambda).plus(a.times(hprime_pre_t).times(lambda));
@@ -528,26 +628,26 @@ public class Main {
 	  grad_mu_s.set(t * (T-t0) + s, grad_mu_t.getArray());
 	}
 
-	System.out.println(mu_t.getRowDimension());
+//	System.out.println(mu_t.getRowDimension());
       } else {
 	/* mu, V: random init (keep unchanged) */
 	/* grad_mu: set to 0 (keep unchanged) */
       }
-      Scanner sc = new Scanner(System.in);
+//      Scanner sc = new Scanner(System.in);
 //      int gu; gu = sc.nextInt();
       /* end for each t */
     }
   }
 
-  /* 
+  /**
    * forward pass 2: update impression features 
    *  (1) mu' (mu_prime_s) 
    *  (2) variance V' (v_prime_s)
    */
-  public static void forward2() {
+  public static void forward2(boolean update_grad) {
     for (int t1 = t0; t1 < T; t1++) {
       int t = t1-t0;
-      System.out.println("forward 2;\tt = " + t1);
+//      System.out.println("forward 2;\tt = " + t1);
       if (t != 0) {
 	int n_pre = NS.get(t-1);	      // N_{t-1}
 	int n = NS.get(t);		      // N_t
@@ -569,7 +669,7 @@ public class Main {
 	v_prime_s.set(t, v_prime_t);
 
 	/* calculate and update gradient */
-	for (int s = 0; s < T-t0; s++) {
+	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  double[] grad_prime_pre_t = Operations.translate(grad_mu_prime_s.get((t-1) * (T-t0) + s), 
 	      id_map_s.get(t-1), id_map_s.get(t));    // grad_mu'^{t-1/s}  [t]
 	  double[] grad_prime_t = new double[n];
@@ -613,10 +713,10 @@ public class Main {
    *  (2) \hat{grad_mu} (grad_mu_hat_s)
    *  (3) \hat{V} (v_hat_s)
    */
-  public static void backward1() {
+  public static void backward1(boolean update_grad) {
     for (int t1 = T-1; t1 > t0; t1--) {
       int t = t1-t0;
-      System.out.println("backward 1;\tt = " + t1);
+//      System.out.println("backward 1;\tt = " + t1);
       if (t != T-1-t0) {
 	int n_pre = NS.get(t-1);    // N_{t-1}
 	double rat = (1.0-lambda)/sigma/sigma;
@@ -639,10 +739,10 @@ public class Main {
 	/* update */
 	mu_hat_s.set(t-1, mu_hat_pre_t.getArray());
 	v_hat_s.set(t-1, V_hat_pre_t.getArray());
-	System.out.println(mu_hat_t.getRowDimension());
+//	System.out.println(mu_hat_t.getRowDimension());
 
 	/* calculate and update \hat{grad_mu}^{t-1} */
-	for (int s = 0; s < T-t0; s++) {
+	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  Matrix grad_mu_hat_t = Operations.translate(new Matrix(grad_mu_hat_s.get(t * (T-t0) + s)), 
 	      id_map_s.get(t), id_map_s.get(t-1), false);   // \hat{grad_mu}^{t/s}  [t-1] 
 	  Matrix grad_mu_pre_t = new Matrix(grad_mu_s.get((t-1) * (T-t0) + s));	// grad_mu^{t-1/s}
@@ -660,22 +760,22 @@ public class Main {
 	 */
 	mu_hat_s.set(t, mu_s.get(t));
 	v_hat_s.set(t, v_s.get(t));
-	for (int s = 0; s < T-t0; s++) {
+	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  grad_mu_hat_s.set(t * (T-t0) + s, grad_mu_s.get(t * (T-t0) + s));
 	}
       }
-      Scanner sc = new Scanner(System.in);
+//      Scanner sc = new Scanner(System.in);
 //      int gu; gu = sc.nextInt();
       /* end for each t */
     }
   }
 
-  /* 
+  /**
    * backward pass 2: update impression features
-   *  (1) \hat{mu} (mu_hat_s) 
-   *  (2) \hat{V} (v_hat_s)
+   *  (1) \hat{mu}' (mu_hat_prime_s) 
+   *  (2) \hat{V}' (v_hat_prime_s)
    */
-  public static void backward2() {
+  public static void backward2(boolean update_grad) {
     double c = (1-lambda)*(1-lambda) / (sigma*sigma);
     for (int t1 = T-1; t1 > t0; t1--) {
       int t = t1-t0;
@@ -702,7 +802,7 @@ public class Main {
 	v_hat_prime_s.set(t-1, v_hat_prime_pre_t);
 
 	/* calculate and update gradient */
-	for (int s = 0; s < T-t0; s++) {
+	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  double[] grad_mu_prime_pre_t = grad_mu_prime_s.get((t-1) * (T-t0) + s);   // grad_mu'^{t-1/s}  [t-1]
 	  double[] grad_mu_hat_prime_t = Operations.translate(grad_mu_hat_prime_s.get(t * (T-t0) + s),
 	      id_map_s.get(t), id_map_s.get(t-1));    // grad_\hat{mu}'^{t/s}  [t-1]
@@ -723,14 +823,18 @@ public class Main {
 	 */
 	mu_hat_prime_s.set(t, mu_prime_s.get(t));
 	v_hat_prime_s.set(t, v_prime_s.get(t));
-	for (int s = 0; s < T-t0; s++) {
+	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  grad_mu_hat_prime_s.set(t * (T-t0) + s, grad_mu_prime_s.get(t * (T-t0) + s));
 	}
       }
       /* end for each t */
     }
   }
-	
+
+
+  /**
+   * toy example
+   */
   public static void test2() {
     int N = 500;
     double[][] m1 = new double[N][N];

@@ -117,4 +117,68 @@ public class Operations {
     }
   }
 
+
+  /**
+   * sample_multivariate_normal:
+   *  draw [n_samples] samples from multivariate normal distribution, and take average
+   *  ref: https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Drawing_values_from_the_distribution
+   */
+  public static double[] 
+  sample_multivariate_normal(double[][] _mean, double[][] _variance, int n_samples) {
+    int n = _variance.length;
+    Matrix var = new Matrix(_variance);
+    Matrix mean = new Matrix(_mean);
+    Matrix c_fact = (new CholeskyDecomposition(var)).getL();
+    Random rand = new Random();
+    double[] _sample = new double[n];
+    /* start sampling */
+    for (int ns = 0; ns < n_samples; ns++) {
+      double[][] _z = new double[n][1];
+      for (int i = 0; i < n; i++) {
+	_z[i][0] = rand.nextGaussian();
+      }
+      Matrix z = new Matrix(_z);
+      Matrix sample = mean.plus(c_fact.times(z));
+      for (int i = 0; i < n; i++) {
+	_sample[i] += sample.get(i,0);
+      }
+    }
+    /* end sampling */
+
+    for (int i = 0; i < n; i++) {
+      _sample[i] /= n_samples;
+    }
+
+    return _sample;
+  }
+
+  /**
+   * sample_multivariate_normal (override):
+   *  draw [n_samples] samples from multivariate normal distribution, and take average
+   *  variance is diagnoal in this method
+   */
+  public static double[] 
+  sample_multivariate_normal(double[] _mean, double[] _variance, int n_samples) {
+    int n = _variance.length;
+    Random rand = new Random();
+    double[] _sample = new double[n];
+    /* start sampling */
+    for (int ns = 0; ns < n_samples; ns++) {
+      double[] _z = new double[n];
+      for (int i = 0; i < n; i++) {
+	_z[i] = rand.nextGaussian();
+      }
+      for (int i = 0; i < n; i++) {
+	_sample[i] += _z[i] * Math.sqrt(_variance[i]) + _mean[i];
+      }
+    }
+    /* end sampling */
+
+    for (int i = 0; i < n; i++) {
+      _sample[i] /= n_samples;
+    }
+
+    return _sample;
+  }
+
 }
