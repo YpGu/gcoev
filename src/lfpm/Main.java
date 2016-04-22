@@ -3,25 +3,25 @@ import java.util.*;
 import Jama.*;
 
 public class Main {
-  public static int t0 = 105;
-  public static int T = 110;
-  public static int NEG = 5;
-  public static double lambda = 0.5;
+  public static int t0 = 0;
+  public static int T = 5;
+//  public static int NEG = 5;
+  public static double lambda = 0;
   public static double sigma = 0.3;
   public static double delta = 0.3;
   public static double scale = 0.2;
-  public static double scale_0 = 0;
-  public static double eps = 1e-6;    // avoid sigular 
+  public static double scale_0 = 0.2;
   public static int N_SAMPLES = 20;   // number of samples from multi-variate normal distribution
   public static int MAX_USER_TIME = 1000;   // maximum of number of users that appear simultaneously
-  public static Random rand = new Random(0);
+  public static Random rand = new Random();
+
+  public static int n = 100;    // TODO
+  public static double lr = 0.001;
 
   /* global data */
-  public static List<Integer> NS = new ArrayList<Integer>(T);	      // number of users
   public static List<double[][]> GS = new ArrayList<double[][]>(T);   // graph
   public static List<double[][]> AS = new ArrayList<double[][]>(T);   // adjacency matrix (off-diagonal) 
   public static List<int[][]> neg_samples = new ArrayList<int[][]>(T);   // negative samples, used in computing gradients 
-  public static List<Map<Integer, Integer>> id_map_s = new ArrayList<Map<Integer, Integer>>(T);	  // id map: global ID -> local ID
   public static List<Double> delta_s = new ArrayList<Double>(T);
   public static List<Double> delta_prime_s = new ArrayList<Double>(T);
 
@@ -60,22 +60,19 @@ public class Main {
   public static void test1() {
     /* read, init data & parameters */
     for (int t = t0; t < T; t++) {
-      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";
+//      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";
+      String fileDir = "./data/" + Integer.toString(t) + ".csv";
       Map<Integer, Integer> idMap = new HashMap<Integer, Integer>();
       Map<Integer, Integer> idMapInv = new HashMap<Integer, Integer>();
-      Map<Integer, Double> freq = FileParser.readCSVDict(fileDir, idMap, idMapInv);
-      id_map_s.add(idMap);
-      FileParser.output(idMap, "./dict/" + t + ".map");
+      Map<Integer, Double> freq = FileParser.readCSVDict(fileDir);
 
-      int n = idMap.size();
-      NS.add(n);
       double[][] G = new double[n][n];
       double[][] A = new double[n][n];
       double[] mu = new double[n]; double[] mu_hat = new double[n];
       double[] mu_prime = new double[n]; double[] mu_hat_prime = new double[n];
       double[][] h = new double[n][1];
       double[][] h_hat = new double[n][1];
-      FileParser.readCSVGraph(fileDir, freq, idMap, G, A);
+      FileParser.readCSVGraph(fileDir, freq, G, A);
       for (int i = 0; i < n; i++) {
 	mu[i] = scale_0 * (rand.nextDouble() - 0.5);
 	mu_hat[i] = scale_0 * (rand.nextDouble() - 0.5);
@@ -100,7 +97,6 @@ public class Main {
     }
 
     for (int t = t0; t < T; t++) {
-      int n = NS.get(t-t0);
       for (int s = t0; s < T; s++) {
 	grad_mu_s.add(new double[n]);
 	grad_mu_hat_s.add(new double[n]);
@@ -112,8 +108,8 @@ public class Main {
     }
 
     /* negative samples */
+    /*
     for (int t = 0; t < T-t0; t++) {
-      int n = NS.get(t);
       int[] users = new int[n];
       for (int i = 0; i < n; i++) users[i] = i;
  
@@ -126,20 +122,21 @@ public class Main {
       }
       neg_samples.add(local_neg_samples);
     }
+    */
 
     /* end initialization */
 
     /* outer for-loop */
-    for (int iter = 0; iter < 10; iter++) {
+    for (int iter = 0; iter < 100; iter++) {
+//      Scanner sc = new Scanner(System.in); int gu; gu = sc.nextInt();
+      System.out.println("====== iter = " + iter + " ======");
       /** intrinsic feature **/
       forward1(true); backward1(true);
       compute_gradient1(iter);
       /* gradient descent: inner for-loop here */
       for (int inner_iter = 0; inner_iter < 20; inner_iter++) {
-	double lr = 0.001;
 	/* update variational parameters \hat{h} using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
-	  int n = NS.get(t);
 	  double[][] h_hat_t = h_hat_s.get(t);
 	  double[] grad_h_hat_t = grad_h_hat_s.get(t);
 	  for (int i = 0; i < n; i++) {
@@ -154,7 +151,6 @@ public class Main {
       }
       /* sample */
       for (int t = 0; t < T-t0; t++) {
-	int n = NS.get(t);
 	double[] samples = Operations.sample_multivariate_normal(mu_hat_s.get(t), v_hat_s.get(t), N_SAMPLES);
 	double[][] h_t = new double[n][1];
 	for (int i = 0; i < n; i++) {
@@ -169,10 +165,8 @@ public class Main {
       compute_gradient2(iter);
       /* gradient descent: inner for-loop here */
       for (int inner_iter = 0; inner_iter < 20; inner_iter++) {
-	double lr = 0.000001;
 	/* update \hat{h}' using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
-	  int n = NS.get(t);
 	  double[][] h_hat_prime_t = h_hat_prime_s.get(t);
 	  double[] grad_h_hat_prime_t = grad_h_hat_prime_s.get(t);
 	  for (int i = 0; i < n; i++) {
@@ -187,13 +181,20 @@ public class Main {
       }
       /* sample */
       for (int t = 0; t < T-t0; t++) {
-	int n = NS.get(t);
 	double[] samples = Operations.sample_multivariate_normal(mu_hat_prime_s.get(t), v_hat_prime_s.get(t), N_SAMPLES);
 	double[][] h_prime_t = new double[n][1];
 	for (int i = 0; i < n; i++) {
 	  h_prime_t[i][0] = samples[i];
 	}
 	h_prime_s.set(t, h_prime_t);
+      }
+
+      /** output **/
+      for (int t = 0; t < T-t0; t++) {
+	double[][] h_t = h_s.get(t); 
+	double[][] h_prime_t = h_prime_s.get(t);
+	FileParser.output(h_t, "./res/h_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_prime_t, "./res/h_p_" + (t+t0) + "_" + iter + ".txt");
       }
     }
   }
@@ -230,18 +231,16 @@ public class Main {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
       if (t != 0) {
-	int n = NS.get(t);
 	double[][] G_t = GS.get(t);
 	double[][] h_prime_t = h_prime_s.get(t);
-	double[][] h_prime_pre_t = Operations.translate(h_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double[][] h_prime_pre_t = h_prime_s.get(t-1);
 	double[] mu_hat_t = mu_hat_s.get(t);
-	double[] mu_hat_pre_t = Operations.translate(mu_hat_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double[] mu_hat_pre_t = mu_hat_s.get(t-1);
 	double delta_t = delta_s.get(t);
-	int[][] neg_sam_t = neg_samples.get(t);
 
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
-	Matrix ave_neighbors = Operations.translate(a.times(hprime_pre_t), id_map_s.get(t-1), id_map_s.get(t), false);	// n*1
+	Matrix ave_neighbors = a.times(hprime_pre_t);
 
 	for (int i = 0; i < n; i++) {
 	  /* first term */
@@ -262,7 +261,6 @@ public class Main {
 	}
       } else {
 	/*
-	int n = NS.get(t);
 	double[][] G_t = GS.get(t);
 	double[][] h_prime_t = h_prime_s.get(t);
 	double[] mu_hat_t = mu_hat_s.get(t);
@@ -293,24 +291,22 @@ public class Main {
 
     for (int t = 0; t < T-t0; t++) {
 //      System.out.println("compute gradient 1, t = " + t);
-      int n = NS.get(t);
       double delta_t = delta_s.get(t);
       double[][] G_t = GS.get(t);
       double[][] h_prime_t = h_prime_s.get(t);
       double[] mu_hat_t = mu_hat_s.get(t);
 
       if (t != 0) {
-	int n_pre = NS.get(t-1);
-	double[] mu_hat_pre_t = Operations.translate(mu_hat_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double[] mu_hat_pre_t = mu_hat_s.get(t-1);
 
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
-	Matrix ave_neighbors = Operations.translate(a.times(hprime_pre_t), id_map_s.get(t-1), id_map_s.get(t), false);	// n*1
+	Matrix ave_neighbors = a.times(hprime_pre_t);
 
 	/* TODO: check whether we can save computation by comparing s and t */
 	for (int s = 0; s < T-t0; s++) {
 	  double[] grad_hat_t = grad_mu_hat_s.get( t * (T-t0) + s );
-	  double[] grad_hat_pre_t = Operations.translate(grad_mu_hat_s.get( (t-1) * (T-t0) + s ), id_map_s.get(t-1), id_map_s.get(t));
+	  double[] grad_hat_pre_t = grad_mu_hat_s.get( (t-1) * (T-t0) + s );
 
 	  for (int i = 0; i < n; i++) {
 	    /* first term */
@@ -389,7 +385,6 @@ public class Main {
 
     /* update global gradient */
     for (int t = 0; t < T-t0; t++) {
-      int n = NS.get(t);
       double[] grad = new double[n];
       for (int i = 0; i < n; i++) grad[i] = tmp_grad_h_hat_s[t][i];
       grad_h_hat_s.set(t, grad);
@@ -407,30 +402,23 @@ public class Main {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
       if (t != 0) {
-	int n = NS.get(t);
 	double[][] G_t = GS.get(t); double[][] G_t_pre = GS.get(t-1);
 	double[][] h_t = h_s.get(t);
-	double[][] h_pre_t = Operations.translate(h_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double[][] h_pre_t = h_s.get(t-1);
 	double[] mu_hat_prime_t = mu_hat_prime_s.get(t);
-	double[] mu_hat_prime_pre_t = Operations.translate(mu_hat_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));
+	double[] mu_hat_prime_pre_t = mu_hat_prime_s.get(t-1);
 	double delta_t = delta_s.get(t);
-	int[][] neg_sam_t = neg_samples.get(t);
 
-	int n_pre = NS.get(t-1);
 	double[][] a_pre = AS.get(t-1);
-	double[] mu_hat_prime_pre_t_un = mu_hat_prime_s.get(t-1);
-	double[] ave_neighbors_pre = new double[n_pre];
-	for (int i = 0; i < n_pre; i++) for (int j = 0; j < n_pre; j++) if (G_t_pre[i][j] != 0) {
-	  ave_neighbors_pre[i] += a_pre[i][j] * mu_hat_prime_pre_t_un[j];
+	double[] ave_neighbors = new double[n];
+	for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) if (G_t_pre[i][j] != 0) {
+	  ave_neighbors[i] += a_pre[i][j] * mu_hat_prime_pre_t[j];
 	}
-	double[] ave_neighbors = Operations.translate(ave_neighbors_pre, id_map_s.get(t-1), id_map_s.get(t));
 
 	for (int i = 0; i < n; i++) {
 	  /* first term */
 	  List<Double> powers = new ArrayList<Double>();
 	  for (int l = 0; l < n; l++) {
-//	  for (int _l = 0; _l < NEG; _l++) {
-//	    int l = neg_sam_t[i][_l];
 	    powers.add(h_t[i][0] * mu_hat_prime_t[l]
 		+ 0.5 * h_t[i][0] * h_t[i][0] * delta_t * delta_t);
 	  }
@@ -447,7 +435,6 @@ public class Main {
 	}
       } else {
 	/*
-	int n = NS.get(t);
 	double[][] G_t = GS.get(t);
 	double[][] h_t = h_s.get(t);
 	double[] mu_hat_prime_t = mu_hat_prime_s.get(t);
@@ -483,7 +470,6 @@ public class Main {
     double[][] nti = new double[T-t0][1000];
     double[][] nti_h = new double[T-t0][1000];
     for (int t = 0; t < T-t0; t++) {
-      int n = NS.get(t);
       double[][] G_t = GS.get(t);
       double[][] h_t = h_s.get(t);  // h^{t}
       double[] sum_1 = new double[n];
@@ -501,7 +487,6 @@ public class Main {
     }
 
     for (int t = 0; t < T-t0; t++) {
-      int n = NS.get(t);
       double delta_t = delta_prime_s.get(t);
       double[][] h_t = h_s.get(t);    // h^{t}
       double[][] h_hat_prime_t = h_hat_prime_s.get(t);	// \hat{h}^{t}
@@ -510,21 +495,18 @@ public class Main {
       double[][] h_prime_t = h_prime_s.get(t);
 
       if (t != 0) {
-	int n_pre = NS.get(t-1);
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
-	Matrix ave_neighbors = Operations.translate(a.times(hprime_pre_t), id_map_s.get(t-1), id_map_s.get(t), false);	// n*1
+	Matrix ave_neighbors = a.times(hprime_pre_t);
 
-	double[][] G_pre_t = Operations.translate(GS.get(t-1), id_map_s.get(t-1), id_map_s.get(t));   // G^{t-1}
-	double[][] A_pre_t = Operations.translate(AS.get(t-1), id_map_s.get(t-1), id_map_s.get(t));   // A^{t-1}
-	double[][] h_pre_t = Operations.translate(h_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));  // h^{t-1}
-	double[] mu_hat_prime_pre_t_un = mu_hat_prime_s.get(t-1);   // \hat{\mu}'^{t-1} [t-1]
-	double[] mu_hat_prime_pre_t = Operations.translate(mu_hat_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));  // \hat{\mu}'^{t-1}  [t]
+	double[][] G_pre_t = GS.get(t-1);   // G^{t-1}
+	double[][] A_pre_t = AS.get(t-1);   // A^{t-1}
+	double[][] h_pre_t = h_s.get(t-1);  // h^{t-1}
+	double[] mu_hat_prime_pre_t = mu_hat_prime_s.get(t-1);  // \hat{\mu}'^{t-1}  [t]
 
 	for (int s = 0; s < T-t0; s++) {
 	  double[] grad_mu_hat_prime_t = grad_mu_hat_prime_s.get( t * (T-t0) + s );
-	  double[] grad_mu_hat_prime_pre_t = Operations.translate(
-	      grad_mu_hat_prime_s.get( (t-1) * (T-t0) + s ), id_map_s.get(t-1), id_map_s.get(t));
+	  double[] grad_mu_hat_prime_pre_t = grad_mu_hat_prime_s.get( (t-1) * (T-t0) + s );
 
 	  /* compute weighted_exp for later use */
 	  double[][] weighted_exp_num = new double[n][n];
@@ -534,14 +516,14 @@ public class Main {
 	    double htj = h_t[j][0]; double muhti = mu_hat_prime_t[i];
 	    weighted_exp_num[i][j] = htj * Math.exp(htj * muhti + 0.5 * htj * htj * delta_t * delta_t);
 	    weighted_exp_den[j] += Math.exp(htj * muhti + 0.5 * htj * htj * delta_t * delta_t);
-	  }
+	  };
 	  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) {
 	    weighted_exp[i][j] = weighted_exp_num[i][j] / weighted_exp_den[j];
 	  }
 	  /* compute sum_mu_hat_prime for later use */
 	  double sum_mu_hat_prime = 0;
-	  for (int i = 0; i < n_pre; i++) {
-	    sum_mu_hat_prime += mu_hat_prime_pre_t_un[i];
+	  for (int i = 0; i < n; i++) {
+	    sum_mu_hat_prime += mu_hat_prime_pre_t[i];
 	  }
 
 	  for (int i = 0; i < n; i++) {
@@ -614,7 +596,6 @@ public class Main {
 
     /* update global gradient */
     for (int t = 0; t < T-t0; t++) {
-      int n = NS.get(t);
       double[] grad = new double[n];
       for (int i = 0; i < n; i++) grad[i] = tmp_grad_h_hat_prime_s[t][i];
       grad_h_hat_prime_s.set(t, grad);
@@ -635,16 +616,14 @@ public class Main {
       int t = t1-t0;
 //      System.out.println("forward 1;\tt = " + t1);
       if (t != 0) {
-	int n_pre = NS.get(t-1);	      // N_{t-1}
-	int n = NS.get(t);		      // N_t
 	double delta_t = delta_s.get(t);      // delta_t
 	double[][] h_hat_t = h_hat_s.get(t);  // \hat{h}^t  [t]
-	double[] mu_pre_t = Operations.translate(mu_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));  // mu^{t-1} (N*1)
+	double[] mu_pre_t = mu_s.get(t-1);    // mu^{t-1} (N*1)
 	double V_pre_t = v_s.get(t-1);	      // V^{t-1}
 
 	Matrix a = new Matrix(AS.get(t-1));   // A^{t-1}
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));   // h'^{t-1} 
-	Matrix ave_neighbors = Operations.translate(a.times(hprime_pre_t), id_map_s.get(t-1), id_map_s.get(t), false);  // n*1
+	Matrix ave_neighbors = a.times(hprime_pre_t);
 
 	/* calculate \mu */
 	double[] mu_t = new double[n];
@@ -664,7 +643,7 @@ public class Main {
 
 	/* calculate and update grad_mu */
 	if (update_grad) for (int s = 0; s < T-t0; s++) {
-	  double[] grad_pre_t_s = Operations.translate(grad_mu_s.get( (t-1) * (T-t0) + s ), id_map_s.get(t-1), id_map_s.get(t));
+	  double[] grad_pre_t_s = grad_mu_s.get( (t-1) * (T-t0) + s );
 	  double[] grad_t_s = new double[n];
 	  for (int i = 0; i < n; i++) {
 	    grad_t_s[i] = factor_1 * (1-lambda) * grad_pre_t_s[i];
@@ -694,10 +673,8 @@ public class Main {
       int t = t1-t0;
 //      System.out.println("forward 2;\tt = " + t1);
       if (t != 0) {
-	int n_pre = NS.get(t-1);	      // N_{t-1}
-	int n = NS.get(t);		      // N_t
 	double delta_t_prime = delta_prime_s.get(t);	  // delta'_t
-	double[] mu_prime_pre_t = Operations.translate(mu_prime_s.get(t-1), id_map_s.get(t-1), id_map_s.get(t));  // mu'^{t-1}  [t]
+	double[] mu_prime_pre_t = mu_prime_s.get(t-1);	  // mu'^{t-1}  [t]
 	double[][] h_hat_prime_t = h_hat_prime_s.get(t);  // \hat{h}'^{t} (n*1)
 	double V_prime_pre_t = v_prime_s.get(t-1);	  // V'^{t-1} [t]
 
@@ -719,7 +696,7 @@ public class Main {
 
 	/* calculate and update grad_mu_prime */
 	if (update_grad) for (int s = 0; s < T-t0; s++) {
-	  double[] grad_mu_prime_pre_t_s = Operations.translate(grad_mu_prime_s.get( (t-1) * (T-t0) + s ), id_map_s.get(t-1), id_map_s.get(t));
+	  double[] grad_mu_prime_pre_t_s = grad_mu_prime_s.get( (t-1) * (T-t0) + s );
 	  double[] grad_mu_prime_t_s = new double[n];
 	  for (int i = 0; i < n; i++) {
 	    grad_mu_prime_t_s[i] = factor_1 * grad_mu_prime_pre_t_s[i];
@@ -736,7 +713,6 @@ public class Main {
 	 *    option 2: ignore v_prime_{t-1} 
 	 */
 	/*
-	int n = NS.get(t);
 	double delta_t_prime = delta_prime_s.get(t);	      // delta'_t
 	double[][] h_hat_prime_t = h_prime_s.get(t);   // \hat{h}'^{t} (n*1)
 	*/
@@ -770,21 +746,20 @@ public class Main {
       int t = t1-t0;
 //      System.out.println("backward 1;\tt = " + t1);
       if (t != T-1-t0) {
-	int n_pre = NS.get(t-1);	    // N_{t-1}
 	double V_pre_t = v_s.get(t-1);	    // V^{t-1}
 	double V_hat_t = v_hat_s.get(t);    // \hat{V}^{t}
 	double[] mu_pre_t = mu_s.get(t-1);  // \mu^{t-1}
-	double[] mu_hat_t = Operations.translate(mu_hat_s.get(t), id_map_s.get(t), id_map_s.get(t-1));   // \hat{\mu}^{t}  [t-1]
+	double[] mu_hat_t = mu_hat_s.get(t);// \hat{\mu}^{t}  [t-1]
 
 	Matrix A_pre_t  = new Matrix(AS.get(t-1));		// A^{t-1}
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));   // h'^{t-1} 
-	Matrix ave_neighbors = A_pre_t.times(hprime_pre_t);	// n_pre * 1
+	Matrix ave_neighbors = A_pre_t.times(hprime_pre_t);	// n * 1
 
 	/* calculate \hat{\mu} at time t-1 */
 	double factor_1 = (1-lambda) * V_pre_t / ( sigma*sigma + (1-lambda)*(1-lambda)*V_pre_t );
 	double factor_2 = ( sigma*sigma ) / ( sigma*sigma + (1-lambda)*(1-lambda)*V_pre_t );
-	double[] mu_hat_pre_t = new double[n_pre];
-	for (int i = 0; i < n_pre; i++) {
+	double[] mu_hat_pre_t = new double[n];
+	for (int i = 0; i < n; i++) {
 	  mu_hat_pre_t[i] = factor_1 * (mu_hat_t[i] - lambda * ave_neighbors.get(i,0)) 
 	    + factor_2 * mu_pre_t[i];
 	}
@@ -797,10 +772,10 @@ public class Main {
 
 	/* calculate and update grad_mu_hat at time t-1 */
 	if (update_grad) for (int s = 0; s < T-t0; s++) {
-	  double[] grad_hat_t_s = Operations.translate(grad_mu_hat_s.get( t * (T-t0) + s ), id_map_s.get(t), id_map_s.get(t-1));
+	  double[] grad_hat_t_s = grad_mu_hat_s.get( t * (T-t0) + s );
 	  double[] grad_pre_t_s = grad_mu_s.get( (t-1) * (T-t0) + s );
-	  double[] grad_hat_pre_t_s = new double[n_pre];
-	  for (int i = 0; i < n_pre; i++) {
+	  double[] grad_hat_pre_t_s = new double[n];
+	  for (int i = 0; i < n; i++) {
 	    grad_hat_pre_t_s[i] = factor_1 * grad_hat_t_s[i] + factor_2 * grad_pre_t_s[i];
 	  }
 	  grad_mu_hat_s.set( (t-1) * (T-t0) + s, grad_hat_pre_t_s );
@@ -835,17 +810,16 @@ public class Main {
       int t = t1-t0;
 //      System.out.println("backward 2;\tt = " + t1);
       if (t != T-1-t0) {
-	int n_pre = NS.get(t-1);    // N_{t-1}
 	double[] mu_prime_pre_t = mu_prime_s.get(t-1);	  // \mu'^{t-1}  [t-1]
-	double[] mu_hat_prime_t = Operations.translate(mu_hat_prime_s.get(t), id_map_s.get(t), id_map_s.get(t-1));  // \hat{\mu}'^{t}  [t-1]
+	double[] mu_hat_prime_t = mu_hat_prime_s.get(t);  // \hat{\mu}'^{t}  [t-1]
 	double V_prime_pre_t = v_prime_s.get(t-1);	  // V'^{t-1} 
 	double V_hat_prime_t = v_hat_prime_s.get(t);	  // \hat{V}'{t}
 
 	/* calculate \hat{\mu}' at time t-1 */
-	double[] mu_hat_prime_pre_t = new double[n_pre];
+	double[] mu_hat_prime_pre_t = new double[n];
 	double factor_1 = ( sigma*sigma ) / ( V_prime_pre_t + sigma*sigma );
 	double factor_2 = ( V_prime_pre_t ) / ( V_prime_pre_t + sigma*sigma );
-	for (int i = 0; i < n_pre; i++) {
+	for (int i = 0; i < n; i++) {
 	  mu_hat_prime_pre_t[i] = factor_1 * mu_prime_pre_t[i] + factor_2 * mu_hat_prime_t[i];
 	}
 	/* calculate \hat{V}' at time t-1 */
@@ -859,9 +833,9 @@ public class Main {
 	/* calculate and update grad_mu_hat_prime at time t-1 */
 	if (update_grad) for (int s = 0; s < T-t0; s++) {
 	  double[] grad_mu_prime_pre_t_s = grad_mu_prime_s.get( (t-1) * (T-t0) + s );
-	  double[] grad_mu_hat_prime_t_s = Operations.translate(grad_mu_hat_prime_s.get( t * (T-t0) + s ), id_map_s.get(t), id_map_s.get(t-1));
-	  double[] grad_mu_hat_prime_pre_t_s = new double[n_pre];
-	  for (int i = 0; i < n_pre; i++) {
+	  double[] grad_mu_hat_prime_t_s = grad_mu_hat_prime_s.get( t * (T-t0) + s );
+	  double[] grad_mu_hat_prime_pre_t_s = new double[n];
+	  for (int i = 0; i < n; i++) {
 	    grad_mu_hat_prime_pre_t_s[i] = factor_1 * grad_mu_prime_pre_t_s[i] + factor_2 * grad_mu_hat_prime_t_s[i];
 	  }
 	  grad_mu_hat_prime_s.set( (t-1) * (T-t0) + s, grad_mu_hat_prime_pre_t_s );
