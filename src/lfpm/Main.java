@@ -4,9 +4,8 @@ import Jama.*;
 
 public class Main {
   public static int t0 = 0;
-  public static int T = 5;
-//  public static int NEG = 5;
-  public static double lambda = 0;
+  public static int T = 13;
+  public static double lambda = 0.5;
   public static double sigma = 0.3;
   public static double delta = 0.3;
   public static double scale = 0.2;
@@ -15,7 +14,7 @@ public class Main {
   public static int MAX_USER_TIME = 1000;   // maximum of number of users that appear simultaneously
   public static Random rand = new Random();
 
-  public static int n = 100;    // TODO
+  public static int n = 120;    // TODO
   public static double lr = 0.001;
 
   /* global data */
@@ -60,8 +59,9 @@ public class Main {
   public static void test1() {
     /* read, init data & parameters */
     for (int t = t0; t < T; t++) {
-//      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";
-      String fileDir = "./data/" + Integer.toString(t) + ".csv";
+//      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";  // original co-voting dataset
+//      String fileDir = "./data/" + Integer.toString(t) + ".csv";  // artificial toy dataset
+      String fileDir = "../../data_sm/nips/" + Integer.toString(t) + ".csv";  // nips dataset (smaller)
       Map<Integer, Integer> idMap = new HashMap<Integer, Integer>();
       Map<Integer, Integer> idMapInv = new HashMap<Integer, Integer>();
       Map<Integer, Double> freq = FileParser.readCSVDict(fileDir);
@@ -106,24 +106,6 @@ public class Main {
       grad_h_hat_s.add(new double[n]);
       grad_h_hat_prime_s.add(new double[n]);
     }
-
-    /* negative samples */
-    /*
-    for (int t = 0; t < T-t0; t++) {
-      int[] users = new int[n];
-      for (int i = 0; i < n; i++) users[i] = i;
- 
-      int[][] local_neg_samples = new int[n][NEG];
-      for (int i = 0; i < n; i++) {
-	Collections.shuffle(Arrays.asList(users));
-	for (int j = 0; j < NEG; j++) {
-	  local_neg_samples[i][j] = users[j];
-	}
-      }
-      neg_samples.add(local_neg_samples);
-    }
-    */
-
     /* end initialization */
 
     /* outer for-loop */
@@ -246,8 +228,6 @@ public class Main {
 	  /* first term */
 	  List<Double> powers = new ArrayList<Double>();
 	  for (int l = 0; l < n; l++) {
-//	  for (int _l = 0; _l < NEG; _l++) {
-//	    int l = neg_sam_t[i][_l];
 	    powers.add(h_prime_t[l][0] * mu_hat_t[i]
 		+ 0.5 * h_prime_t[l][0] * h_prime_t[l][0] * delta_t * delta_t);
 	  }
@@ -317,9 +297,7 @@ public class Main {
 	    /* second term */
 	    double gi2 = 0;
 	    double weighted_exp_num = 0, weighted_exp_den = 0;
-//	    for (int j = 0; j < NEG; j++) {
 	    for (int l = 0; l < n; l++) {
-//	      int l = neg_samples.get(t)[i][j];
 	      double hpl = h_prime_t[l][0];
 	      double muit = mu_hat_t[i];
 	      double e = Math.exp(hpl * muit + 0.5 * hpl * hpl * delta_t * delta_t);
@@ -533,12 +511,9 @@ public class Main {
 	    
 	    /* second term */
 	    double g2 = 0;
-//	    for (int _j = 0; _j < NEG; _j++) {
 	    for (int j = 0; j < n; j++) {
-//	      int j = neg_samples.get(t)[i][_j];
 	      g2 -= nti[t][j] * weighted_exp[i][j] * grad_mu_hat_prime_t[i];
 	    }
-//	    if (i%100 == 0) System.out.printf("gugugu %f ", g2);
 	    tmp_grad_h_hat_prime_s[s][i] += g2;
 
 	    /* third term */
