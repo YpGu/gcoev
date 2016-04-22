@@ -86,13 +86,30 @@ public class FileParser {
 
   /* arr_s.get(t) is a n*1 array */
   public static void
-  output(List<double[][]> arr_s, String fileDir) {
+  output_2d(List<double[][]> arr_s, String fileDir) {
     try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
       for (int i = 0; i < arr_s.size(); i++) {
 	double[][] arr = arr_s.get(i);
         writer.printf("%d ", i);
 	for (int j = 0; j < arr.length; j++) {
 	  writer.printf("%f ", arr[j][0]);
+	}
+        writer.printf("\n");
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /* arr_s.get(t) is a n*1 array */
+  public static void
+  output_1d(List<double[]> arr_s, String fileDir) {
+    try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(fileDir)))) {
+      for (int i = 0; i < arr_s.size(); i++) {
+	double[] arr = arr_s.get(i);
+        writer.printf("%d ", i);
+	for (int j = 0; j < arr.length; j++) {
+	  writer.printf("%f ", arr[j]);
 	}
         writer.printf("\n");
       }

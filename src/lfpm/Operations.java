@@ -154,31 +154,36 @@ public class Operations {
 
   /**
    * sample_multivariate_normal (override):
-   *  draw [n_samples] samples from multivariate normal distribution, and take average
-   *  variance is diagnoal in this method
+   *  draw [n_samples] samples from multivariate normal distribution
+   *  when the variance is diagnoal (and identical)
    */
   public static double[] 
-  sample_multivariate_normal(double[] _mean, double[] _variance, int n_samples) {
-    int n = _variance.length;
+  sample_multivariate_normal(double[] mean, double variance, int n_samples) {
+    if (variance < 0) {
+      System.out.println("Variance = " + variance);
+      System.out.println("ERROR: variance should be non-negative!");
+      Scanner sc = new Scanner(System.in); int gu = sc.nextInt();
+    }
     Random rand = new Random();
-    double[] _sample = new double[n];
+    int n = mean.length;
+    double[] sample = new double[n];
     /* start sampling */
     for (int ns = 0; ns < n_samples; ns++) {
-      double[] _z = new double[n];
+      double[] z = new double[n];
       for (int i = 0; i < n; i++) {
-	_z[i] = rand.nextGaussian();
+	z[i] = rand.nextGaussian();
       }
       for (int i = 0; i < n; i++) {
-	_sample[i] += _z[i] * Math.sqrt(_variance[i]) + _mean[i];
+	sample[i] += z[i] * Math.sqrt(variance) + mean[i];
       }
     }
     /* end sampling */
 
     for (int i = 0; i < n; i++) {
-      _sample[i] /= n_samples;
+      sample[i] /= n_samples;
     }
 
-    return _sample;
+    return sample;
   }
 
 
