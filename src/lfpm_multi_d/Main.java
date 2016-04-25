@@ -64,8 +64,6 @@ public class Main {
 //      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";  // original co-voting dataset
 //      String fileDir = "./data/" + Integer.toString(t) + ".csv";  // artificial toy dataset
       String fileDir = "../../data_sm/nips_17/out/" + Integer.toString(t) + ".csv";  // nips dataset (smaller)
-      Map<Integer, Integer> idMap = new HashMap<Integer, Integer>();
-      Map<Integer, Integer> idMapInv = new HashMap<Integer, Integer>();
       Map<Integer, Double> freq = FileParser.readCSVDict(fileDir);
 
       double[][] G = new double[n][n];
@@ -239,16 +237,17 @@ public class Main {
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
 	Matrix ave_neighbors = a.times(hprime_pre_t);
 
+	double[] hp2delta2 = new double[n];
+	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	  hp2delta2[i] += 0.5 * h_prime_t[i][k] * h_prime_t[i][k] * delta_t * delta_t;
+	}
+
 	for (int i = 0; i < n; i++) {
 	  /* first term */
-	  double hp2delta2 = 0;
-	  for (int k = 0; k < K; k++) {
-	    hp2delta2 += 0.5 * h_prime_t[i][k] * h_prime_t[i][k] * delta_t * delta_t;
-	  }
 	  List<Double> powers = new ArrayList<Double>();
 	  for (int l = 0; l < n; l++) {
 	    double hp_muh = Operations.inner_product(h_prime_t[l], mu_hat_t[i], K);
-	    powers.add(hp_muh + hp2delta2);
+	    powers.add(hp_muh + hp2delta2[l]);
 	  }
 	  double lse = log_sum_exp(powers);
 
