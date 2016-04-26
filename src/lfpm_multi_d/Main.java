@@ -1,4 +1,5 @@
 import java.io.*;
+import java.io.File;
 import java.util.*;
 import Jama.*;
 
@@ -31,7 +32,7 @@ public class Main {
   public static List<double[][]> h_s = new ArrayList<double[][]>(T);	  // h: latent attribute (N*K)
   public static List<double[][]> h_hat_s = new ArrayList<double[][]>(T);  // \hat{h}: variational parameter (N*K)
   public static List<double[][]> mu_s = new ArrayList<double[][]>(T);	  // \mu: forward mean (N*K)
-  public static List<Double> v_s = new ArrayList<Double>(T);	  // V: forward variance 
+  public static List<Double> v_s = new ArrayList<Double>(T);		  // V: forward variance 
   public static List<double[][]> mu_hat_s = new ArrayList<double[][]>(T); // \hat{\mu}: backward mean (N*K)
   public static List<Double> v_hat_s = new ArrayList<Double>(T);	  // \hat{V}: backward variance (K)
 
@@ -41,11 +42,10 @@ public class Main {
   public static List<double[][]> mu_prime_s = new ArrayList<double[][]>(T);	// \mu': forward mean (N*K)
   public static List<Double> v_prime_s = new ArrayList<Double>(T);		// V': forward variance (K)
   public static List<double[][]> mu_hat_prime_s = new ArrayList<double[][]>(T);	// \hat{\mu}': backward mean (N*K)
-  public static List<Double> v_hat_prime_s = new ArrayList<Double>(T);	// \hat{V}': backward variance (K)
-  public static double v_prime_init = 0.01;	// init variance for every h'
+  public static List<Double> v_hat_prime_s = new ArrayList<Double>(T);		// \hat{V}': backward variance (K)
 
   /* gradients (forward/backward)
-   * suppose T' = T-t0
+   * denote T' = T-t0
    * then we need to store T'*T' gradients: 
    *  e.g. \partial \mu^{t} / \partial h^{s} for all (t,s)
    * each (t,s) is saved as grad_mu_s.get(t * T' + s)
@@ -191,8 +191,11 @@ public class Main {
       for (int t = 0; t < T-t0; t++) {
 	double[][] h_t = h_s.get(t); 
 	double[][] h_prime_t = h_prime_s.get(t);
-	FileParser.output(h_t, "./res/h_" + (t+t0) + "_" + iter + ".txt");
-	FileParser.output(h_prime_t, "./res/h_p_" + (t+t0) + "_" + iter + ".txt");
+	/* output filename: 
+	 *    ./res/<seed>/h_<time>_<iter>.txt 
+	 */
+	FileParser.output(h_t, "./res/" + seed + "/h_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_prime_t, "./res/" + seed + "/h_p_" + (t+t0) + "_" + iter + ".txt");
       }
     }
   }
@@ -954,6 +957,9 @@ public class Main {
       System.exit(0);
     }
     String seed = args[0];
+    File f = new File("./res/" + seed);
+    f.mkdir();
+
     test1(seed);
   }
 
