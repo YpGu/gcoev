@@ -16,7 +16,7 @@ public class Operations {
       /* arr1 is a square matrix */
       double[][] arr2 = new double[n2][n2];
       if (option) {
-	/* random prior */ // TODO: what about covariance matrix?
+	/* random prior */ 
 	for (int i = 0; i < n2; i++) for (int j = 0; j < n2; j++) {
 	  arr2[i][j] = Main.scale * (Main.rand.nextDouble() - 0.5);
 	}
@@ -129,17 +129,17 @@ public class Operations {
       System.out.println("ERROR: variance should be non-negative!");
       Scanner sc = new Scanner(System.in); int gu = sc.nextInt();
     }
+    if (n_samples == 0) 
+      return mean;
+
     Random rand = new Random();
     int n = mean.length; int K = Main.K;
     double[][] sample = new double[n][K];
     /* start sampling */
     for (int ns = 0; ns < n_samples; ns++) {
-      double[][] z = new double[n][K];
       for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	z[i][k] = rand.nextGaussian();
-      }
-      for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	sample[i][k] += z[i][k] * Math.sqrt(variance) + mean[i][k];
+	double z = rand.nextGaussian();
+	sample[i][k] += z * Math.sqrt(variance) + mean[i][k];
       }
     }
     /* end sampling */
@@ -152,7 +152,7 @@ public class Operations {
   }
 
   /**
-   * sample_multivariate_normal (override):
+   * sample_multivariate_normal:
    *  draw [n_samples] samples from multivariate normal distribution
    *  when the variance is diagnoal (and identical)
    */
@@ -163,17 +163,17 @@ public class Operations {
       System.out.println("ERROR: variance should be non-negative!");
       Scanner sc = new Scanner(System.in); int gu = sc.nextInt();
     }
+    if (n_samples == 0) 
+      return mean;
+
     Random rand = new Random();
     int n = mean.length;
     double[] sample = new double[n];
     /* start sampling */
     for (int ns = 0; ns < n_samples; ns++) {
-      double[] z = new double[n];
       for (int i = 0; i < n; i++) {
-	z[i] = rand.nextGaussian();
-      }
-      for (int i = 0; i < n; i++) {
-	sample[i] += z[i] * Math.sqrt(variance) + mean[i];
+	double z = rand.nextGaussian();
+	sample[i] += z * Math.sqrt(variance) + mean[i];
       }
     }
     /* end sampling */

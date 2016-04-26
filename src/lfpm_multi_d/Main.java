@@ -7,18 +7,19 @@ public class Main {
   public static int T = 17;
   public static double lambda = 0.5;
 //  public static double sigma = 0.3;
-  public static double sigma = 10;
+  public static double sigma = 1;
   public static double delta = 0.3;
   public static double scale = 0.2;
-  public static double scale_0 = 0.2;
-  public static int N_SAMPLES = 20;   // number of samples from multi-variate normal distribution
+  public static double scale_0 = 0;
+  public static int N_SAMPLES = 100;   // number of samples from multi-variate normal distribution
   public static Random rand = new Random();
 
   public static int n = 110;    // TODO
-  public static int K = 5;
+  public static int K = 15;
   public static double lr_1 = 0.03;
   public static double lr_2 = 0.005;
-  public static int MAX_ITER = 40;
+  public static int MAX_ITER = 100;
+  public static int INNER_ITER = 100;
 
   /* global data */
   public static List<double[][]> GS = new ArrayList<double[][]>(T);   // graph
@@ -58,12 +59,12 @@ public class Main {
   public static List<double[][]> grad_h_hat_s = new ArrayList<double[][]>(T);	    // grad of ELBO w.r.t. \mu (each i, k)
   public static List<double[][]> grad_h_hat_prime_s = new ArrayList<double[][]>(T);	    // grad of ELBO w.r.t \hat{\mu} (each i, k)
 
-  public static void test1() {
+  public static void test1(String seed) {
     /* read, init data & parameters */
     for (int t = t0; t < T; t++) {
 //      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";  // original co-voting dataset
 //      String fileDir = "./data/" + Integer.toString(t) + ".csv";  // artificial toy dataset
-      String fileDir = "../../data_sm/nips_17/out/" + Integer.toString(t) + ".csv";  // nips dataset (smaller)
+      String fileDir = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.csv";  // nips dataset (smaller)
       Map<Integer, Double> freq = FileParser.readCSVDict(fileDir);
 
       double[][] G = new double[n][n];
@@ -115,11 +116,11 @@ public class Main {
 //      Scanner sc = new Scanner(System.in); int gu; gu = sc.nextInt();
       System.out.println("====== iter = " + iter + " ======");
       /** intrinsic feature **/
-      forward1(true); backward1(true);
+      forward1(true, iter); backward1(true);
       compute_gradient1(iter);
       double old_obj = 0;
       /* gradient descent: inner for-loop here */
-      for (int inner_iter = 0; inner_iter < 20; inner_iter++) {
+      for (int inner_iter = 0; inner_iter < INNER_ITER; inner_iter++) {
 	/* update variational parameters \hat{h} using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
 	  double[][] h_hat_t = h_hat_s.get(t);
@@ -130,9 +131,10 @@ public class Main {
 	  h_hat_s.set(t, h_hat_t);
 	}
 	/* update \hat{\mu} and \hat{V}, since both are function of \hat{h} */
-	forward1(false); backward1(false);
+	forward1(false, iter); backward1(false);
 	double obj1 = compute_objective1();
-	System.out.println("(1) iter = " + inner_iter + ", obj 1 = " + obj1);
+	if (inner_iter%10 == 0) 
+	  System.out.println("(1) iter = " + inner_iter + ", obj 1 = " + obj1);
 	if (inner_iter != 0 && obj1 < old_obj) {
 	  lr_1 *= 0.8;
 	  break;
@@ -154,7 +156,7 @@ public class Main {
       forward2(true); backward2(true);
       compute_gradient2(iter);
       /* gradient descent: inner for-loop here */
-      for (int inner_iter = 0; inner_iter < 20; inner_iter++) {
+      for (int inner_iter = 0; inner_iter < INNER_ITER; inner_iter++) {
 	/* update \hat{h}' using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
 	  double[][] h_hat_prime_t = h_hat_prime_s.get(t);
@@ -167,7 +169,8 @@ public class Main {
 	/* update \hat{\mu}' and \hat{V}', since both are function of \hat{h}' */
 	forward2(false); backward2(false);
 	double obj2 = compute_objective2();
-	System.out.println("(2) iter = " + inner_iter + ", obj 2 = " + obj2);
+	if (inner_iter%10 == 0) 
+	  System.out.println("(2) iter = " + inner_iter + ", obj 2 = " + obj2);
 	if (inner_iter != 0 && obj2 < old_obj) {
 	  lr_2 *= 0.8;
 	  break;
@@ -634,9 +637,26 @@ public class Main {
    *  (2) grad_mu (grad_mu_s) 
    *  (3) variance V (v_s)
    */
-  public static void forward1(boolean update_grad) {
-    for (int t1 = t0; t1 < T; t1++) {
-      int t = t1-t0;
+  public static void forward1(boolean update_grad, int iter) {
+    /*
+    if (iter == 4) {
+      int t = 15;
+      double[][] h_t = new double[n][K];
+      double[][] h_hat_t = new double[n][K];
+      double[][] h_prime_t = new double[n][K];
+      double[][] h_hat_prime_t = new double[n][K];
+      for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	h_t[i][k] = h_s.get(t-1)[i][k];
+	h_hat_t[i][k] = h_hat_s.get(t-1)[i][k];
+	h_prime_t[i][k] = h_prime_s.get(t-1)[i][k];
+	h_hat_prime_t[i][k] = h_hat_prime_s.get(t-1)[i][k];
+      }
+      h_s.set(t, h_t); h_hat_s.set(t, h_hat_t);
+      h_prime_s.set(t, h_prime_t); h_hat_prime_s.set(t, h_hat_prime_t);
+    }
+    */
+
+    for (int t = 0; t < T-t0; t++) {
 //      System.out.println("forward 1;\tt = " + t1);
       if (t != 0) {
 	double delta_t = delta_s.get(t);      // delta_t
@@ -929,7 +949,12 @@ public class Main {
   }
 
   public static void main(String[] args) {
-    test1();
+    if (args.length != 1) {
+      System.out.println("Usage: java Main <seed>");
+      System.exit(0);
+    }
+    String seed = args[0];
+    test1(seed);
   }
 
 }
