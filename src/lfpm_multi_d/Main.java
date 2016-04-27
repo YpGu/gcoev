@@ -6,22 +6,24 @@ import Jama.*;
 public class Main {
   public static int t0 = 0;
   public static int T = 17;
-  public static double lambda = 0.5;
-//  public static double sigma = 1;   // current results are based on sigma = 1
-  public static double sigma;
+  public static double lambda = 0;
+  public static double sigma = 1;   // current results are based on sigma = 1
+//  public static double sigma;
   public static String sigma_str;
+  public static String lambda_str;
   public static double delta = 0.3;
   public static double scale = 0.2;
   public static double scale_0 = 0;
   public static int N_SAMPLES = 100;   // number of samples from multi-variate normal distribution
+    // todo: check the effect of N_SAMPLES
   public static Random rand = new Random();
 
   public static int n = 110;    // TODO
   public static int K = 15;
-  public static double lr_1 = 0.03/4;
-  public static double lr_2 = 0.005/4;
-  public static int MAX_ITER = 100;
-  public static int INNER_ITER = 100;
+  public static double lr_1 = 0.03;
+  public static double lr_2 = 0.005;
+  public static int MAX_ITER = 300;
+  public static int INNER_ITER = 500;
 
   /* global data */
   public static List<double[][]> GS = new ArrayList<double[][]>(T);   // graph
@@ -113,15 +115,17 @@ public class Main {
     /* end initialization */
 
     /* outer for-loop */
+    double old_obj_1 = -1, old_obj_2 = -1;
     for (int iter = 0; iter < MAX_ITER; iter++) {
 //      Scanner sc = new Scanner(System.in); int gu; gu = sc.nextInt();
       System.out.println("====== iter = " + iter + " ======");
       /** intrinsic feature **/
       forward1(true, iter); backward1(true);
       compute_gradient1(iter);
-      double old_obj = 0;
+      double new_obj_1 = 0;
       /* gradient descent: inner for-loop here */
-      for (int inner_iter = 0; inner_iter < INNER_ITER; inner_iter++) {
+      int inner_iter_1 = 0;
+      while (inner_iter_1 < INNER_ITER) {
 	/* update variational parameters \hat{h} using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
 	  double[][] h_hat_t = h_hat_s.get(t);
@@ -134,14 +138,15 @@ public class Main {
 	/* update \hat{\mu} and \hat{V}, since both are function of \hat{h} */
 	forward1(false, iter); backward1(false);
 	double obj1 = compute_objective1();
-	if (inner_iter%10 == 0) 
-	  System.out.println("(1) iter = " + inner_iter + ", obj 1 = " + obj1);
-	if (inner_iter != 0 && obj1 < old_obj) {
-	  lr_1 *= 0.8;
-	  break;
+	if (inner_iter_1 % 10 == 0) 
+	  System.out.println("(1) iter = " + inner_iter_1 + ", obj 1 = " + obj1);
+	if (inner_iter_1 != 0 && obj1 < new_obj_1) {
+	  lr_1 *= 0.8; break;
 	}
-	old_obj = obj1;
+	new_obj_1 = obj1;
+	inner_iter_1 += 1;
       }
+      if (inner_iter_1 == INNER_ITER) lr_1 /= 0.8;
       /* sample */
       for (int t = 0; t < T-t0; t++) {
 	double[][] samples = Operations.sample_multivariate_normal(mu_hat_s.get(t), v_hat_s.get(t), N_SAMPLES);
@@ -152,12 +157,13 @@ public class Main {
 	h_s.set(t, h_t);
       }
 
-
       /** impression feature **/
       forward2(true); backward2(true);
       compute_gradient2(iter);
+      double new_obj_2 = 0;
       /* gradient descent: inner for-loop here */
-      for (int inner_iter = 0; inner_iter < INNER_ITER; inner_iter++) {
+      int inner_iter_2 = 0;
+      while (inner_iter_2 < INNER_ITER) {
 	/* update \hat{h}' using gradient descent */
 	for (int t = 0; t < T-t0; t++) {
 	  double[][] h_hat_prime_t = h_hat_prime_s.get(t);
@@ -170,14 +176,15 @@ public class Main {
 	/* update \hat{\mu}' and \hat{V}', since both are function of \hat{h}' */
 	forward2(false); backward2(false);
 	double obj2 = compute_objective2();
-	if (inner_iter%10 == 0) 
-	  System.out.println("(2) iter = " + inner_iter + ", obj 2 = " + obj2);
-	if (inner_iter != 0 && obj2 < old_obj) {
-	  lr_2 *= 0.8;
-	  break;
+	if (inner_iter_2 % 10 == 0) 
+	  System.out.println("(2) iter = " + inner_iter_2 + ", obj 2 = " + obj2);
+	if (inner_iter_2 != 0 && obj2 < new_obj_2) {
+	  lr_2 *= 0.8; break;
 	}
-	old_obj = obj2;
+	new_obj_2 = obj2;
+	inner_iter_2 += 1;
       }
+      if (inner_iter_2 == INNER_ITER) lr_2 /= 0.8;
       /* sample */
       for (int t = 0; t < T-t0; t++) {
 	double[][] samples = Operations.sample_multivariate_normal(mu_hat_prime_s.get(t), v_hat_prime_s.get(t), N_SAMPLES);
@@ -195,9 +202,19 @@ public class Main {
 	/* output filename: 
 	 *    ./res/<seed>_<sigma>/h_<time>_<iter>.txt 
 	 */
-	FileParser.output(h_t, "./res/" + seed + "_" + sigma_str + "/h_" + (t+t0) + "_" + iter + ".txt");
-	FileParser.output(h_prime_t, "./res/" + seed + "_" + sigma_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_t, "./res/" + seed + "_" + lambda_str + "/h_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_prime_t, "./res/" + seed + "_" + lambda_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
       }
+
+      /* check convergence */
+      double diff_1 = -(new_obj_1 - old_obj_1) / old_obj_1;
+      double diff_2 = -(new_obj_2 - old_obj_2) / old_obj_2;
+      if (iter != 0 && diff_1 < 1e-6 && diff_2 < 1e-6) {
+	System.out.println("diff_1 = " + diff_1);
+	System.out.println("diff_2 = " + diff_2);
+	break;
+      }
+      old_obj_1 = new_obj_1; old_obj_2 = new_obj_2;
     }
   }
 
@@ -958,10 +975,11 @@ public class Main {
       System.exit(0);
     }
     String seed = args[0];
-    sigma_str = args[1];
-    File f = new File("./res/" + seed + "_" + sigma_str);	      // e.g. "./res/0_2.5/"
+    lambda_str = args[1];
+    File f = new File("./res/" + seed + "_" + lambda_str);	      // e.g. "./res/0_0.5/"
     f.mkdir();
-    sigma = Double.parseDouble(args[1]);
+//    sigma = Double.parseDouble(args[1]);
+    lambda = Double.parseDouble(args[1]);
 
     test1(seed);
   }
