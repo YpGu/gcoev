@@ -7,8 +7,9 @@ public class Main {
   public static int t0 = 0;
   public static int T = 17;
   public static double lambda = 0.5;
-//  public static double sigma = 0.3;
-  public static double sigma = 1;
+//  public static double sigma = 1;   // current results are based on sigma = 1
+  public static double sigma;
+  public static String sigma_str;
   public static double delta = 0.3;
   public static double scale = 0.2;
   public static double scale_0 = 0;
@@ -17,8 +18,8 @@ public class Main {
 
   public static int n = 110;    // TODO
   public static int K = 15;
-  public static double lr_1 = 0.03;
-  public static double lr_2 = 0.005;
+  public static double lr_1 = 0.03/4;
+  public static double lr_2 = 0.005/4;
   public static int MAX_ITER = 100;
   public static int INNER_ITER = 100;
 
@@ -192,10 +193,10 @@ public class Main {
 	double[][] h_t = h_s.get(t); 
 	double[][] h_prime_t = h_prime_s.get(t);
 	/* output filename: 
-	 *    ./res/<seed>/h_<time>_<iter>.txt 
+	 *    ./res/<seed>_<sigma>/h_<time>_<iter>.txt 
 	 */
-	FileParser.output(h_t, "./res/" + seed + "/h_" + (t+t0) + "_" + iter + ".txt");
-	FileParser.output(h_prime_t, "./res/" + seed + "/h_p_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_t, "./res/" + seed + "_" + sigma_str + "/h_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_prime_t, "./res/" + seed + "_" + sigma_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
       }
     }
   }
@@ -952,13 +953,15 @@ public class Main {
   }
 
   public static void main(String[] args) {
-    if (args.length != 1) {
-      System.out.println("Usage: java Main <seed>");
+    if (args.length != 2) {
+      System.out.println("Usage: java Main <seed> <sigma>");
       System.exit(0);
     }
     String seed = args[0];
-    File f = new File("./res/" + seed);
+    sigma_str = args[1];
+    File f = new File("./res/" + seed + "_" + sigma_str);	      // e.g. "./res/0_2.5/"
     f.mkdir();
+    sigma = Double.parseDouble(args[1]);
 
     test1(seed);
   }
