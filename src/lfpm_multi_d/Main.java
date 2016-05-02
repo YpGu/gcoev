@@ -6,15 +6,17 @@ import Jama.*;
 public class Main {
   public static int t0 = 0;
   public static int T = 17;
-  public static double lambda = 0;
+  public static double lambda = 0.5;
   public static double sigma = 1;   // current results are based on sigma = 1
 //  public static double sigma;
-  public static String sigma_str;
-  public static String lambda_str;
-  public static double delta = 0.3;
+//  public static String lambda_str;
+//  public static double delta = 0.5;
+  public static double delta;
+  public static String delta_str;
+
   public static double scale = 0.2;
   public static double scale_0 = 0;
-  public static int N_SAMPLES = 100;   // number of samples from multi-variate normal distribution
+  public static int N_SAMPLES = 0;   // number of samples from multi-variate normal distribution
     // todo: check the effect of N_SAMPLES
   public static Random rand = new Random();
 
@@ -22,8 +24,8 @@ public class Main {
   public static int K = 15;
   public static double lr_1 = 0.03;
   public static double lr_2 = 0.005;
-  public static int MAX_ITER = 300;
-  public static int INNER_ITER = 500;
+  public static int MAX_ITER = 50;
+  public static int INNER_ITER = 300;
 
   /* global data */
   public static List<double[][]> GS = new ArrayList<double[][]>(T);   // graph
@@ -93,8 +95,8 @@ public class Main {
       h_s.add(h); h_prime_s.add(h); h_hat_s.add(h_hat); h_hat_prime_s.add(h);
 
       /* for test */
-      delta_s.add(0.1);
-      delta_prime_s.add(0.1);
+      delta_s.add(delta);
+      delta_prime_s.add(delta);	// TODO previous: 0.1
 
       v_s.add(0.1); v_hat_s.add(0.1); 
       v_prime_s.add(0.1); v_hat_prime_s.add(0.1);
@@ -146,7 +148,7 @@ public class Main {
 	new_obj_1 = obj1;
 	inner_iter_1 += 1;
       }
-      if (inner_iter_1 == INNER_ITER) lr_1 /= 0.8;
+      if (inner_iter_1 == INNER_ITER) lr_1 *= 2;
       /* sample */
       for (int t = 0; t < T-t0; t++) {
 	double[][] samples = Operations.sample_multivariate_normal(mu_hat_s.get(t), v_hat_s.get(t), N_SAMPLES);
@@ -184,7 +186,7 @@ public class Main {
 	new_obj_2 = obj2;
 	inner_iter_2 += 1;
       }
-      if (inner_iter_2 == INNER_ITER) lr_2 /= 0.8;
+      if (inner_iter_2 == INNER_ITER) lr_2 *= 2;
       /* sample */
       for (int t = 0; t < T-t0; t++) {
 	double[][] samples = Operations.sample_multivariate_normal(mu_hat_prime_s.get(t), v_hat_prime_s.get(t), N_SAMPLES);
@@ -202,8 +204,8 @@ public class Main {
 	/* output filename: 
 	 *    ./res/<seed>_<sigma>/h_<time>_<iter>.txt 
 	 */
-	FileParser.output(h_t, "./res/" + seed + "_" + lambda_str + "/h_" + (t+t0) + "_" + iter + ".txt");
-	FileParser.output(h_prime_t, "./res/" + seed + "_" + lambda_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_t, "./res/" + seed + "_" + delta_str + "/h_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_prime_t, "./res/" + seed + "_" + delta_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
       }
 
       /* check convergence */
@@ -589,7 +591,8 @@ public class Main {
 
 	    /* third term */
 	    for (int j = 0; j < n; j++) if (G_pre_t[j][i] != 0) {
-	      double g3 = ( h_t[j][k] - (1-lambda) * h_pre_t[j][k] - lambda * A_pre_t[j][i] * sum_mu_hat_prime[k] )
+//	      double g3 = ( h_t[j][k] - (1-lambda) * h_pre_t[j][k] - lambda * A_pre_t[j][i] * sum_mu_hat_prime[k] )
+	      double g3 = ( h_t[j][k] - (1-lambda) * h_pre_t[j][k] - lambda * A_pre_t[j][i] * mu_hat_prime_pre_t[i][k] )
 		* lambda * A_pre_t[j][i] * grad_mu_hat_prime_pre_t[i][k] / ( sigma*sigma ) ;
 	      tmp_grad_h_hat_prime_s[s][j][k] += g3;   // j instead of i!
 	    }
@@ -971,15 +974,15 @@ public class Main {
 
   public static void main(String[] args) {
     if (args.length != 2) {
-      System.out.println("Usage: java Main <seed> <sigma>");
+      System.out.println("Usage: java Main <seed> <delta>");
       System.exit(0);
     }
     String seed = args[0];
-    lambda_str = args[1];
-    File f = new File("./res/" + seed + "_" + lambda_str);	      // e.g. "./res/0_0.5/"
+    delta_str = args[1];
+    File f = new File("./res/" + seed + "_" + delta_str);	      // e.g. "./res/0_0.5/"
     f.mkdir();
-//    sigma = Double.parseDouble(args[1]);
-    lambda = Double.parseDouble(args[1]);
+    delta = Double.parseDouble(args[1]);
+//    lambda = Double.parseDouble(args[1]);
 
     test1(seed);
   }
