@@ -30,8 +30,14 @@ public class FileParser {
     return freq;
   }
 
+  /** readCSVGraph:
+   *	read network in .csv format
+   *	G: binary edge
+   *	A: normalized adjacency matrix
+   *	label: whether the file contains existing links or non-existing links
+   */
   public static void 
-  readCSVGraph(String fileDir, Map<Integer, Double> freq, double[][] G, double[][] A) {
+  readCSVGraph(String fileDir, Map<Integer, Double> freq, double[][] G, double[][] A, List<Integer> lst, boolean label) {
     try (BufferedReader br = new BufferedReader(new FileReader(fileDir))) {
       String currentLine;
       while ((currentLine = br.readLine()) != null) {
@@ -39,9 +45,19 @@ public class FileParser {
 	String[] tokens = currentLine.split(",");
 	int x = Integer.parseInt(tokens[0]);
 	int y = Integer.parseInt(tokens[1]);
-	G[x][y] = 1.0; G[y][x] = 1.0;
-	A[x][y] = 1.0 / freq.get(x);
-	A[y][x] = 1.0 / freq.get(y);
+	int e1 = x * Main.n + y, e2 = y * Main.n + x;
+	if (label) {
+	  /* need to make the network undirected */
+	  lst.add(e1); lst.add(e2);
+	  G[x][y] = 1.0; G[y][x] = 1.0;
+	  A[x][y] = 1.0 / freq.get(x);
+	  A[y][x] = 1.0 / freq.get(y);
+	} else {
+	  /* because of the way in which negative links are sampled,
+	   * only directed links are added
+	   */
+	  lst.add(e1); 
+	}
       }
     } catch (IOException e) {
       e.printStackTrace();

@@ -185,6 +185,45 @@ public class Operations {
     return sample;
   }
 
+  /**
+   * log_sum_exp:
+   *  for inputs a1, a2, ...
+   *  output log (e^a1 + e^a2 + ... )
+   */
+  public static double log_sum_exp(List<Double> ls) {
+    double ins_log = 0;
+    Collections.sort(ls);
+    double v_max = ls.get(ls.size()-1);
+    if (Double.isNaN(v_max)) {
+      System.out.println("ERROR6");
+    }
+    for (int i = 0; i < ls.size(); i++) {
+      ins_log += Math.exp(ls.get(i) - v_max);
+    }
+    double res = v_max + Math.log(ins_log);
+    if (Double.isNaN(res)) {
+      System.out.println("ERROR4");
+      Scanner sc = new Scanner(System.in);
+      int gu = sc.nextInt();
+    }
+    return res;
+  }
+
+  /** 
+   * log_one_plus_exp:
+   *	input: x
+   *	output: log( 1 + e^x )
+   */
+  public static double log_one_plus_exp(double x) {
+    if (x <= 0) {
+      double res = Math.log(1.0 + Math.exp(x));
+      return res;
+    } else {
+      double res = Math.log(1.0 + Math.exp(-x));
+      return x + res;
+    }
+  }
+
 
   /**
    * calculate the inner product of two vectors
@@ -195,6 +234,20 @@ public class Operations {
     for (int i = 0; i < dim; i++) 
       res += arr1[i] * arr2[i];
     return res;
+  }
+
+  /** 
+   * sigmoid: output 1/(1+e^{-x})
+   */
+  public static double
+  sigmoid(double x) {
+    if (x > 0) {
+      double res = 1.0 / (1.0 + Math.exp(-x));
+      return res;
+    } else {
+      double res = 1.0 / (1.0 + Math.exp(x));
+      return 1-res;
+    }
   }
 
 }

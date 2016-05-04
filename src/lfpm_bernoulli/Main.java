@@ -11,8 +11,11 @@ public class Main {
 //  public static double sigma;
 //  public static String lambda_str;
 //  public static double delta = 0.5;
-  public static double delta;
-  public static String delta_str;
+  public static double delta = 0.5;
+//  public static String delta_str;
+
+  public static List< List<Integer> > pos_links = new ArrayList< List<Integer> >(T);  // for each t; encode: (i,j) -> i * n + j
+  public static List< List<Integer> > neg_links = new ArrayList< List<Integer> >(T);  // for each t; encode: (i,j) -> i * n + j
 
   public static double scale = 0.2;
   public static double scale_0 = 0;
@@ -23,7 +26,7 @@ public class Main {
   public static int n = 110;    // TODO
   public static int K = 15;
   public static double lr_1 = 0.03;
-  public static double lr_2 = 0.005;
+  public static double lr_2 = 0.002;
   public static int MAX_ITER = 50;
   public static int INNER_ITER = 300;
 
@@ -68,9 +71,9 @@ public class Main {
     /* read, init data & parameters */
     for (int t = t0; t < T; t++) {
 //      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";  // original co-voting dataset
-//      String fileDir = "./data/" + Integer.toString(t) + ".csv";  // artificial toy dataset
-      String fileDir = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.csv";  // nips dataset (smaller)
-      Map<Integer, Double> freq = FileParser.readCSVDict(fileDir);
+      String file_dir_pos = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.csv";	// nips dataset (smaller)
+      String file_dir_neg = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.neg.csv"; // nips dataset (smaller)
+      Map<Integer, Double> freq = FileParser.readCSVDict(file_dir_pos);
 
       double[][] G = new double[n][n];
       double[][] A = new double[n][n];
@@ -80,7 +83,16 @@ public class Main {
       double[][] mu_hat_prime = new double[n][K];
       double[][] h = new double[n][K];
       double[][] h_hat = new double[n][K];
-      FileParser.readCSVGraph(fileDir, freq, G, A);
+
+      List<Integer> pos_link_t = new ArrayList<Integer>();  // encode: (i,j) -> i * n + j
+      List<Integer> neg_link_t = new ArrayList<Integer>();  // encode: (i,j) -> i * n + j
+      FileParser.readCSVGraph(file_dir_pos, freq, G, A, pos_link_t, true);
+      FileParser.readCSVGraph(file_dir_neg, freq, G, A, neg_link_t, false);
+      pos_links.add(pos_link_t);
+      neg_links.add(neg_link_t);
+
+//      System.out.println("pos = " + pos_link_t.size() + " neg = " + neg_link_t.size());
+
       for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
 	mu[i][k] = scale_0 * (rand.nextDouble() - 0.5);
 	mu_hat[i][k] = scale_0 * (rand.nextDouble() - 0.5);
@@ -119,7 +131,6 @@ public class Main {
     /* outer for-loop */
     double old_obj_1 = -1, old_obj_2 = -1;
     for (int iter = 0; iter < MAX_ITER; iter++) {
-//      Scanner sc = new Scanner(System.in); int gu; gu = sc.nextInt();
       System.out.println("====== iter = " + iter + " ======");
       /** intrinsic feature **/
       forward1(true, iter); backward1(true);
@@ -204,8 +215,10 @@ public class Main {
 	/* output filename: 
 	 *    ./res/<seed>_<sigma>/h_<time>_<iter>.txt 
 	 */
-	FileParser.output(h_t, "./res/" + seed + "_" + delta_str + "/h_" + (t+t0) + "_" + iter + ".txt");
-	FileParser.output(h_prime_t, "./res/" + seed + "_" + delta_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_t, "./res/h_" + (t+t0) + "_" + iter + ".txt");
+	FileParser.output(h_prime_t, "./res/h_p_" + (t+t0) + "_" + iter + ".txt");
+//	FileParser.output(h_t, "./res/" + seed + "_" + delta_str + "/h_" + (t+t0) + "_" + iter + ".txt");
+//	FileParser.output(h_prime_t, "./res/" + seed + "_" + delta_str + "/h_p_" + (t+t0) + "_" + iter + ".txt");
       }
 
       /* check convergence */
@@ -221,199 +234,116 @@ public class Main {
   }
 
   /**
-   * log_sum_exp:
-   *  for inputs a1, a2, ...
-   *  output log (e^a1 + e^a2 + ... )
-   */
-  public static double log_sum_exp(List<Double> ls) {
-    double ins_log = 0;
-    Collections.sort(ls);
-    double v_max = ls.get(ls.size()-1);
-    if (Double.isNaN(v_max)) {
-      System.out.println("ERROR6");
-    }
-    for (int i = 0; i < ls.size(); i++) {
-      ins_log += Math.exp(ls.get(i) - v_max);
-    }
-    double res = v_max + Math.log(ins_log);
-    if (Double.isNaN(res)) {
-      System.out.println("ERROR4");
-      Scanner sc = new Scanner(System.in);
-      int gu = sc.nextInt();
-    }
-    return res;
-  }
-
-  /**
    * compute_objective1:
    *  return the lower bound when h' is fixed
    */
   public static double compute_objective1() {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
-      if (t != 0) {
-	double[][] G_t = GS.get(t);
-	double[][] h_prime_t = h_prime_s.get(t);
-	double[][] h_prime_pre_t = h_prime_s.get(t-1);
-	double[][] mu_hat_t = mu_hat_s.get(t);
-	double[][] mu_hat_pre_t = mu_hat_s.get(t-1);
-	double delta_t = delta_s.get(t);
+      double[][] G_t = GS.get(t);
+      double[][] h_prime_t = h_prime_s.get(t);
+      double[][] mu_hat_t = mu_hat_s.get(t);
+      double delta_t = delta_s.get(t);
+      List<Integer> pos_link_t = pos_links.get(t);
+      List<Integer> neg_link_t = neg_links.get(t);
 
+      double[] hp2delta2 = new double[n];
+      for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	hp2delta2[i] += 0.5 * h_prime_t[i][k] * h_prime_t[i][k] * delta_t * delta_t;
+      }
+
+      /* first term: regardless of t */
+      for (int e: pos_link_t) {
+	int i = e/n; int j = e%n;
+	double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
+	double power = hp_muh + hp2delta2[j];
+	res += (hp_muh - Operations.log_one_plus_exp(power));
+      }
+      for (int e: neg_link_t) {
+	int i = e/n; int j = e%n;
+	double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
+	double power = hp_muh + hp2delta2[j];
+	res -= Operations.log_one_plus_exp(power);
+      }
+
+      /* second term: only when t != 0 */
+      if (t != 0) {
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
 	Matrix ave_neighbors = a.times(hprime_pre_t);
-
-	double[] hp2delta2 = new double[n];
+	double[][] mu_hat_pre_t = mu_hat_s.get(t-1);
 	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	  hp2delta2[i] += 0.5 * h_prime_t[i][k] * h_prime_t[i][k] * delta_t * delta_t;
+	  double diff = mu_hat_t[i][k] - (1-lambda) * mu_hat_pre_t[i][k] - lambda * ave_neighbors.get(i,k);
+	  res -= 0.5 * diff * diff / (sigma*sigma);
 	}
-
-	for (int i = 0; i < n; i++) {
-	  /* first term */
-	  List<Double> powers = new ArrayList<Double>();
-	  for (int l = 0; l < n; l++) {
-	    double hp_muh = Operations.inner_product(h_prime_t[l], mu_hat_t[i], K);
-	    powers.add(hp_muh + hp2delta2[l]);
-	  }
-	  double lse = log_sum_exp(powers);
-
-	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
-	    double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
-	    res += G_t[i][j] * (hp_muh - lse);
-	  }
-
-	  /* second term */
-	  for (int k = 0; k < K; k++) {
-	    double diff = mu_hat_t[i][k] - (1-lambda) * mu_hat_pre_t[i][k] - lambda * ave_neighbors.get(i,k);
-	    res -= 0.5 * diff * diff / (sigma*sigma);
-	  }
-	}
-      } else {
-	/*
-	double[][] G_t = GS.get(t);
-	double[][] h_prime_t = h_prime_s.get(t);
-	double[] mu_hat_t = mu_hat_s.get(t);
-	double delta_t = delta_s.get(t);
-	int[][] neg_sam_t = neg_samples.get(t);
-
-	for (int i = 0; i < n; i++) {
-	  // first term 
-	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
-	    List<Double> powers = new ArrayList<Double>();
-	    for (int _l = 0; _l < NEG; _l++) {
-	      int l = neg_sam_t[i][_l];
-	      powers.add(h_prime_t[l][0] * mu_hat_t[i] 
-		  + 0.5 * h_prime_t[l][0] * h_prime_t[l][0] * delta_t * delta_t);
-	    }
-	    double lse = log_sum_exp(powers);
-	    res += G_t[i][j] * (h_prime_t[j][0] * mu_hat_t[i] - lse);
-	  }
-	}
-	*/
       }
     }
     return res;
   }
 
+  /** 
+   * compute_gradient1:
+   *	compute the gradient of \hat{\mu} w.r.t \hat{h}
+   */
   public static void compute_gradient1(int iteration) {
     double[][][] tmp_grad_h_hat_s = new double[T-t0][n][K];
 
     for (int t = 0; t < T-t0; t++) {
-//      System.out.println("compute gradient 1, t = " + t);
       double delta_t = delta_s.get(t);
       double[][] G_t = GS.get(t);
       double[][] h_prime_t = h_prime_s.get(t);
       double[][] mu_hat_t = mu_hat_s.get(t);
+      List<Integer> pos_link_t = pos_links.get(t);
+      List<Integer> neg_link_t = neg_links.get(t);
 
+      double[] hp2delta2 = new double[n];
+      for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	hp2delta2[i] += 0.5 * h_prime_t[i][k] * h_prime_t[i][k] * delta_t * delta_t;
+      }
+
+      /* TODO: check whether we can save computation by comparing s and t */
+
+      /* first term: regardless of t */
+      for (int s = 0; s < T-t0; s++) {
+	double[][] grad_hat_t = grad_mu_hat_s.get( t * (T-t0) + s );
+
+	for (int e: pos_link_t) {
+	  int i = e/n; int j = e%n;
+	  double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
+	  double power = hp_muh + hp2delta2[j];
+	  for (int k = 0; k < K; k++) {
+	    double g1 = grad_hat_t[i][k] * h_prime_t[j][k] * Operations.sigmoid(-power);
+	    tmp_grad_h_hat_s[s][i][k] += g1;
+	  }
+	}
+	for (int e: neg_link_t) {
+	  int i = e/n; int j = e%n;
+	  double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
+	  double power = hp_muh + hp2delta2[j];
+	  for (int k = 0; k < K; k++) {
+	    double g1 = -grad_hat_t[i][k] * h_prime_t[j][k] * Operations.sigmoid(power);
+	    tmp_grad_h_hat_s[s][i][k] += g1;
+	  }
+	}
+      }
+
+      /* second term: only when t != 0 */
       if (t != 0) {
 	double[][] mu_hat_pre_t = mu_hat_s.get(t-1);
-
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
 	Matrix ave_neighbors = a.times(hprime_pre_t);
-
-	/* TODO: check whether we can save computation by comparing s and t */
 	for (int s = 0; s < T-t0; s++) {
 	  double[][] grad_hat_t = grad_mu_hat_s.get( t * (T-t0) + s );
 	  double[][] grad_hat_pre_t = grad_mu_hat_s.get( (t-1) * (T-t0) + s );
-	  double[] hp2delta2 = new double[n];
 	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	    hp2delta2[i] += 0.5 * h_prime_t[i][k] * h_prime_t[i][k] * delta_t * delta_t;
-	  }
-
-	  for (int i = 0; i < n; i++) {
-	    /* first term */
-	    double[] weighted_exp_num = new double[K]; 
-	    double weighted_exp_den = 0;
-	    for (int l = 0; l < n; l++) {
-	      double hp_muh = Operations.inner_product(h_prime_t[l], mu_hat_t[i], K);
-	      double e = Math.exp(hp_muh + hp2delta2[l]);
-	      if (Double.isNaN(e)) {
-		/* check if e explodes */
-		System.out.println("ERROR2");
-		Scanner sc = new Scanner(System.in);
-		int gu; gu = sc.nextInt();
-	      }
-	      for (int k = 0; k < K; k++) {
-		weighted_exp_num[k] += h_prime_t[l][k] * e;
-		weighted_exp_den += e;
-	      }
-	    }
-	    for (int j = 0; j < n; j++) for (int k = 0; k < K; k++) {
-	      double weighted_exp = weighted_exp_num[k] / weighted_exp_den;
-	      double gi1 = G_t[i][j] * grad_hat_t[i][k] * (h_prime_t[j][k] - weighted_exp);
-	      tmp_grad_h_hat_s[s][i][k] += gi1;
-	    }
-
-	    /* second term */
-	    for (int k = 0; k < K; k++) {
-	      double gi2 = -(mu_hat_t[i][k] - (1-lambda) * mu_hat_pre_t[i][k] - lambda * ave_neighbors.get(i,k))
-		* (grad_hat_t[i][k] - (1-lambda) * grad_hat_pre_t[i][k]) / (sigma*sigma);
-	      tmp_grad_h_hat_s[s][i][k] += gi2;
-	    }
+	    double g2 = -(mu_hat_t[i][k] - (1-lambda) * mu_hat_pre_t[i][k] - lambda * ave_neighbors.get(i,k))
+	      * (grad_hat_t[i][k] - (1-lambda) * grad_hat_pre_t[i][k]) / (sigma*sigma);
+	    tmp_grad_h_hat_s[s][i][k] += g2;
 	  }
 	}
-      } else {
-	/* no such term (t=0) in ELBO */
-	/*
-	for (int s = 0; s < T-t0; s++) {
-	  double[] grad_hat_t = grad_mu_hat_s.get(t * (T-t0) + s);
+      } 
 
-	  for (int i = 0; i < n; i++) {
-	    double n_it = 0;
-	    for (int j = 0; j < n; j++) n_it += G_t[i][j];
-
-	    // first term 
-	    double gi1 = -mu_hat_t[i] * grad_hat_t[i] / (sigma * sigma);
-	    tmp_grad_h_hat_s[s][i] += gi1;
-
-	    // second term 
-	    double gi2 = 0;
-	    double weighted_exp_num = 0, weighted_exp_den = 0;
-	    for (int j = 0; j < NEG; j++) {
-	      int l = neg_samples.get(t)[i][j];
-	      double hpl = h_prime_t[l][0];
-	      double muit = mu_hat_t[i];
-	      double e = Math.exp(hpl * muit + 0.5 * hpl * hpl * delta_t * delta_t);
-	      // TODO: check if e explodes 
-	      if (Double.isNaN(e)) {
-		System.out.println("ERROR3");
-		Scanner sc = new Scanner(System.in);
-		int gu; gu = sc.nextInt();
-	      }
-	      weighted_exp_num += hpl * e;
-	      weighted_exp_den += e;
-	    }
-	    double weighted_exp = weighted_exp_num / weighted_exp_den;
-	    for (int j = 0; j < n; j++) {
-	      gi2 += G_t[i][j] * grad_hat_t[i] * (h_prime_t[j][0] - weighted_exp);
-	    }
-	    tmp_grad_h_hat_s[s][i] += gi2;
-	  }
-	}
-	*/
-      }
-      /* end if-else */
     }
 
     /* update global gradient */
@@ -429,6 +359,7 @@ public class Main {
     return;
   }
 
+
   /**
    * compute_objective2:
    *  return the lower bound when h is fixed
@@ -436,74 +367,52 @@ public class Main {
   public static double compute_objective2() {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
+      double[][] G_t = GS.get(t); 
+      double[][] h_t = h_s.get(t);
+      double[][] mu_hat_prime_t = mu_hat_prime_s.get(t);
+      double delta_t = delta_s.get(t);
+      List<Integer> pos_link_t = pos_links.get(t);
+      List<Integer> neg_link_t = neg_links.get(t);
+
+      double[] h2delta2 = new double[n];
+      for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	h2delta2[i] += 0.5 * h_t[i][k] * h_t[i][k] * delta_t * delta_t;
+      }
+
+      /* first term: regardless of t */
+      for (int e: pos_link_t) {
+	int i = e/n; int j = e%n;
+	double h_muhp = Operations.inner_product(h_t[i], mu_hat_prime_t[j], K);
+	double power = h_muhp + h2delta2[i];
+	res += (h_muhp - Operations.log_one_plus_exp(power));
+      }
+      for (int e: neg_link_t) {
+	int i = e/n; int j = e%n;
+	double h_muhp = Operations.inner_product(h_t[i], mu_hat_prime_t[j], K);
+	double power = h_muhp + h2delta2[i];
+	res -= Operations.log_one_plus_exp(power);
+      }
+
+      /* second/third term: only when t != 0 */
       if (t != 0) {
-	double[][] G_t = GS.get(t); double[][] G_t_pre = GS.get(t-1);
-	double[][] h_t = h_s.get(t);
+	double[][] G_t_pre = GS.get(t-1);
 	double[][] h_pre_t = h_s.get(t-1);
-	double[][] mu_hat_prime_t = mu_hat_prime_s.get(t);
 	double[][] mu_hat_prime_pre_t = mu_hat_prime_s.get(t-1);
-	double delta_t = delta_s.get(t);
+	Matrix a = new Matrix(AS.get(t-1));
+	Matrix mu_hat_prime_pre_t_mat = new Matrix(mu_hat_prime_s.get(t-1));
+	Matrix ave_neighbors = a.times(mu_hat_prime_pre_t_mat);
 
-	double[][] a_pre = AS.get(t-1);
-	double[][] ave_neighbors = new double[n][K];
-	for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) if (G_t_pre[i][j] != 0) {
-	  for (int k = 0; k < K; k++) {
-	    ave_neighbors[i][k] += a_pre[i][j] * mu_hat_prime_pre_t[j][k];
-	  }
+	/* second term */
+	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	  double diff = h_t[i][k] - (1-lambda) * h_pre_t[i][k] - lambda * ave_neighbors.get(i,k);
+	  res -= 0.5 * diff * diff / (sigma*sigma);
 	}
 
-	for (int i = 0; i < n; i++) {
-	  /* first term */
-	  double h2delta2 = 0;
-	  for (int k = 0; k < K; k++) {
-	    h2delta2 += 0.5 * h_t[i][k] * h_t[i][k] * delta_t * delta_t;
-	  }
-	  List<Double> powers = new ArrayList<Double>();
-	  for (int l = 0; l < n; l++) {
-	    double h_muhp = Operations.inner_product(h_t[i], mu_hat_prime_t[l], K);
-	    powers.add(h_muhp + h2delta2);
-	  }
-	  double lse = log_sum_exp(powers);
-
-	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
-	    double h_muhp = Operations.inner_product(h_t[i], mu_hat_prime_t[j], K);
-	    res += G_t[i][j] * (h_muhp - lse);
-	  }
-
-	  /* second term */
-	  for (int k = 0; k < K; k++) {
-	    double diff = h_t[i][k] - (1-lambda) * h_pre_t[i][k] - lambda * ave_neighbors[i][k];
-	    res -= 0.5 * diff * diff / (sigma*sigma);
-	  }
-
-	  /* third term */
-	  for (int k = 0; k < K; k++) {
-	    double diff_3 = mu_hat_prime_t[i][k] - mu_hat_prime_pre_t[i][k];
-	    res -= 0.5 * diff_3 * diff_3 / (sigma*sigma);
-	  }
+	/* third term */
+	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	  double diff = mu_hat_prime_t[i][k] - mu_hat_prime_pre_t[i][k];
+	  res -= 0.5 * diff * diff / (sigma*sigma);
 	}
-      } else {
-	/*
-	double[][] G_t = GS.get(t);
-	double[][] h_t = h_s.get(t);
-	double[] mu_hat_prime_t = mu_hat_prime_s.get(t);
-	double delta_t = delta_s.get(t);
-	int[][] neg_sam_t = neg_samples.get(t);
-
-	for (int i = 0; i < n; i++) {
-	  // first term 
-	  for (int j = 0; j < n; j++) if (G_t[i][j] != 0) {
-	    List<Double> powers = new ArrayList<Double>();
-	    for (int _l = 0; _l < NEG; _l++) {
-	      int l = neg_sam_t[i][_l];
-	      powers.add(h_t[i][0] * mu_hat_prime_t[l]
-		  + 0.5 * h_t[i][0] * h_t[i][0] * delta_t * delta_t);
-	    }
-	    double lse = log_sum_exp(powers);
-	    res += G_t[i][j] * (h_t[i][0] * mu_hat_prime_t[j] - lse);
-	  }
-	}
-	*/
       }
     }
     return res;
@@ -512,25 +421,6 @@ public class Main {
   public static void compute_gradient2(int iteration) {
     double[][][] tmp_grad_h_hat_prime_s = new double[T-t0][n][K];
 
-    /* 
-     * compute 
-     *	  nti[t][i] = \sum_{j} { n_{ij} }
-     * and 
-     *	  nti_h[t][j][k] = \sum_{i} { n_{ij}^{t} h_{ik}^{t} }
-     */
-    double[][] nti = new double[T-t0][n];
-    double[][][] nti_h = new double[T-t0][n][K];
-    for (int t = 0; t < T-t0; t++) {
-      double[][] G_t = GS.get(t);
-      double[][] h_t = h_s.get(t);  // h^{t}
-      for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) {
-	nti[t][i] += G_t[i][j];
-	for (int k = 0; k < K; k++) {
-	  nti_h[t][j][k] += G_t[i][j] * h_t[i][k];
-	}
-      }
-    }
-
     for (int t = 0; t < T-t0; t++) {
       double delta_t = delta_prime_s.get(t);
       double[][] h_t = h_s.get(t);    // h^{t}
@@ -538,12 +428,43 @@ public class Main {
       double[][] mu_hat_t = mu_hat_s.get(t);	// \hat{\mu}^{t}
       double[][] mu_hat_prime_t = mu_hat_prime_s.get(t);	// \hat{\mu}'^{t}
       double[][] h_prime_t = h_prime_s.get(t);
+      List<Integer> pos_link_t = pos_links.get(t);
+      List<Integer> neg_link_t = neg_links.get(t);
 
+      double[] h2delta2 = new double[n];
+      for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	h2delta2[i] += 0.5 * h_t[i][k] * h_t[i][k] * delta_t * delta_t;
+      }
+
+      /* first term: regardless of t */
+      for (int s = 0; s < T-t0; s++) {
+	double[][] grad_mu_hat_prime_t = grad_mu_hat_prime_s.get( t * (T-t0) + s );
+
+	for (int e: pos_link_t) {
+	  int i = e/n; int j = e%n;
+	  double h_muhp = Operations.inner_product(h_t[i], mu_hat_prime_t[j], K);
+	  double power = h_muhp + h2delta2[i];
+	  for (int k = 0; k < K; k++) {
+	    double g1 = grad_mu_hat_prime_t[j][k] * h_t[i][k] * Operations.sigmoid(-power);
+	    tmp_grad_h_hat_prime_s[s][j][k] += g1;
+	  }
+	}
+	for (int e: neg_link_t) {
+	  int i = e/n; int j = e%n;
+	  double h_muhp = Operations.inner_product(h_t[i], mu_hat_prime_t[j], K);
+	  double power = h_muhp + h2delta2[i];
+	  for (int k = 0; k < K; k++) { 
+	    double g1 = -grad_mu_hat_prime_t[j][k] * h_t[i][k] * Operations.sigmoid(power);
+	    tmp_grad_h_hat_prime_s[s][j][k] += g1;
+	  }
+	}
+      }
+
+      /* second/third term: only when t != 0 */
       if (t != 0) {
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
 	Matrix ave_neighbors = a.times(hprime_pre_t);
-
 	double[][] G_pre_t = GS.get(t-1);   // G^{t-1}
 	double[][] A_pre_t = AS.get(t-1);   // A^{t-1}
 	double[][] h_pre_t = h_s.get(t-1);  // h^{t-1}
@@ -552,94 +473,24 @@ public class Main {
 	for (int s = 0; s < T-t0; s++) {
 	  double[][] grad_mu_hat_prime_t = grad_mu_hat_prime_s.get( t * (T-t0) + s );
 	  double[][] grad_mu_hat_prime_pre_t = grad_mu_hat_prime_s.get( (t-1) * (T-t0) + s );
-	  double[] h2delta2 = new double[n];
-	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	    h2delta2[i] += 0.5 * h_t[i][k] * h_t[i][k] * delta_t * delta_t;
-	  }
-
-	  /* compute weighted_exp for later use */
-	  double[][][] weighted_exp_num = new double[K][n][n];
-	  double[][] weighted_exp_den = new double[K][n];
-	  double[][][] weighted_exp = new double[K][n][n];
-	  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) {
-	    double h_muhp = Operations.inner_product(h_t[j], mu_hat_prime_t[i], K);
+	  /* second term */
+	  for (int e: pos_link_t) {
+	    int i = e/n; int j = e%n;
 	    for (int k = 0; k < K; k++) {
-	      weighted_exp_num[k][i][j] = h_t[j][k] * Math.exp(h_muhp + h2delta2[j]);
-	      weighted_exp_den[k][j] += Math.exp(h_muhp + h2delta2[j]);
-	    }
-	  }
-	  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) for (int k = 0; k < K; k++) {
-	    weighted_exp[k][i][j] = weighted_exp_num[k][i][j] / weighted_exp_den[k][j];
-	  }
-	  /* compute sum_mu_hat_prime for later use */
-	  double[] sum_mu_hat_prime = new double[K];
-	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	    sum_mu_hat_prime[k] += mu_hat_prime_pre_t[i][k];
-	  }
-
-	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	    /* first term */
-	    double g1 = nti_h[t][i][k] * grad_mu_hat_prime_t[i][k];
-	    tmp_grad_h_hat_prime_s[s][i][k] += g1;
-	    
-	    /* second term */
-	    double g2 = 0;
-	    for (int j = 0; j < n; j++) {
-	      g2 -= nti[t][j] * weighted_exp[k][i][j] * grad_mu_hat_prime_t[i][k];
-	    }
-	    tmp_grad_h_hat_prime_s[s][i][k] += g2;
-
-	    /* third term */
-	    for (int j = 0; j < n; j++) if (G_pre_t[j][i] != 0) {
-//	      double g3 = ( h_t[j][k] - (1-lambda) * h_pre_t[j][k] - lambda * A_pre_t[j][i] * sum_mu_hat_prime[k] )
-	      double g3 = ( h_t[j][k] - (1-lambda) * h_pre_t[j][k] - lambda * A_pre_t[j][i] * mu_hat_prime_pre_t[i][k] )
-		* lambda * A_pre_t[j][i] * grad_mu_hat_prime_pre_t[i][k] / ( sigma*sigma ) ;
-	      tmp_grad_h_hat_prime_s[s][j][k] += g3;   // j instead of i!
+	      double g2 = ( h_t[i][k] - (1-lambda) * h_pre_t[i][k] - lambda * A_pre_t[i][j] * mu_hat_prime_pre_t[j][k] )
+		* lambda * A_pre_t[i][j] * grad_mu_hat_prime_pre_t[j][k] / ( sigma*sigma ) ;
+	      tmp_grad_h_hat_prime_s[s][j][k] += g2; 
 	    }
 	  }
 
-	  /* fourth term */
+	  /* third term */
 	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
-	    double g4 = -( mu_hat_prime_t[i][k] - mu_hat_prime_pre_t[i][k] ) 
+	    double g3 = -( mu_hat_prime_t[i][k] - mu_hat_prime_pre_t[i][k] ) 
 	      * ( grad_mu_hat_prime_t[i][k] - grad_mu_hat_prime_pre_t[i][k] ) / ( sigma*sigma );
-	    tmp_grad_h_hat_prime_s[s][i][k] += g4;
+	    tmp_grad_h_hat_prime_s[s][i][k] += g3;
 	  }
 	}
-      } else {
-	/*
-	for (int s = 0; s < T-t0; s++) {
-	  double[] grad_mu_hat_prime_t = grad_mu_hat_prime_s.get(t * (T-t0) + s);
-	  for (int i = 0; i < n; i++) {
-	    // first term 
-	    double g1 = nti_hp[t][i] * grad_mu_hat_prime_t[i];
-	    tmp_grad_h_hat_prime_s[s][i] += g1;
-	    
-	    // second term 
-	    double g2 = 0;
-	    for (int _j = 0; _j < NEG; _j++) {
-	      double weighted_exp_num = 0, weighted_exp_den = 0;
-	      int j = neg_samples.get(t)[i][_j];
-	      double htj = h_t[j][0]; double muhti = mu_hat_t[i];
-	      weighted_exp_num += htj * Math.exp(htj * muhti + 0.5 * htj * htj * delta_t * delta_t);
-	      for (int _k = 0; _k < NEG; _k++) {
-		int k = neg_samples.get(t)[i][_k];
-		double muhtk = mu_hat_t[k];
-		weighted_exp_den += Math.exp(htj * muhtk + 0.5 * htj * htj * delta_t * delta_t);
-	      }
-	      g2 -= nti[t][j] * weighted_exp_num / weighted_exp_den * grad_mu_hat_prime_t[i];
-	    }
-	    tmp_grad_h_hat_prime_s[s][i] += g2;
-	  }
-
-	  // fourth term (if any)
-	  if (s == t) for (int i = 0; i < n; i++) {
-	    double g4 = -h_hat_prime_t[i][0] / (sigma*sigma);
-	    tmp_grad_h_hat_prime_s[s][i] += g4;
-	  }
-	}
-	*/
-      }
-
+      } 
     }
 
     /* update global gradient */
@@ -973,17 +824,24 @@ public class Main {
   }
 
   public static void main(String[] args) {
+    /*
     if (args.length != 2) {
       System.out.println("Usage: java Main <seed> <delta>");
       System.exit(0);
     }
     String seed = args[0];
     delta_str = args[1];
+//    delta = Double.parseDouble(args[1]);
+//    lambda = Double.parseDouble(args[1]);
     File f = new File("./res/" + seed + "_" + delta_str);	      // e.g. "./res/0_0.5/"
     f.mkdir();
-    delta = Double.parseDouble(args[1]);
-//    lambda = Double.parseDouble(args[1]);
+    */
 
+    if (args.length != 1) {
+      System.out.println("Usage: java Main <seed>");
+      System.exit(0);
+    }
+    String seed = args[0];
     test1(seed);
   }
 
