@@ -3,28 +3,47 @@ import java.util.*;
 import java.lang.*;
 
 public class FileParser {
-  public static Map<Integer, Double> 
+  public static Map<Integer, Integer> 
   readCSVDict(String fileDir) {
-    Map<Integer, Double> freq = new HashMap<Integer, Double>();
+    Map<Integer, Set<Integer> > x2ys = new HashMap<Integer, Set<Integer> >();
     try (BufferedReader br = new BufferedReader(new FileReader(fileDir))) {
       String currentLine;
       while ((currentLine = br.readLine()) != null) {
-	// each line: id1, id2, weight
+	// each line: id1, id2, (weight)
 	String[] tokens = currentLine.split(",");
-	int id1 = Integer.parseInt(tokens[0]);	  // global ID
-	int id2 = Integer.parseInt(tokens[1]);	  // global ID
+	int x = Integer.parseInt(tokens[0]);	  // global ID
+	int y = Integer.parseInt(tokens[1]);	  // global ID
 	// update frequencies
-	if (!freq.containsKey(id1)) 
-	  freq.put(id1, 1.0);
-	else 
-	  freq.put(id1, freq.get(id1) + 1);
-	if (!freq.containsKey(id2)) 
-	  freq.put(id2, 1.0);
-	else 
-	  freq.put(id2, freq.get(id2) + 1);
+	if (!x2ys.containsKey(x)) {
+	  Set<Integer> ys = new HashSet<Integer>();
+	  ys.add(y);
+	  x2ys.put(x, ys);
+	} else {
+	  Set<Integer> ys = x2ys.get(x);
+	  ys.add(y);
+	  x2ys.put(x, ys);
+	}
+
+	if (!x2ys.containsKey(y)) {
+	  Set<Integer> ys = new HashSet<Integer>();
+	  ys.add(x);
+	  x2ys.put(y, ys);
+	} else {
+	  Set<Integer> ys = x2ys.get(y);
+	  ys.add(x);
+	  x2ys.put(y, ys);
+	}
       }
     } catch (IOException e) {
       e.printStackTrace();
+    }
+
+    Map<Integer, Integer> freq = new HashMap<Integer, Integer>();
+    for (Map.Entry<Integer, Set<Integer> > e: x2ys.entrySet()) {
+      int x = e.getKey();
+      Set<Integer> ys = e.getValue();
+      int size = ys.size();
+      freq.put(x, size);
     }
 
     return freq;
@@ -37,7 +56,7 @@ public class FileParser {
    *	label: whether the file contains existing links or non-existing links
    */
   public static void 
-  readCSVGraph(String fileDir, Map<Integer, Double> freq, double[][] G, double[][] A, List<Integer> lst, boolean label) {
+  readCSVGraph(String fileDir, Map<Integer, Integer> freq, double[][] G, double[][] A, List<Integer> lst, boolean label) {
     try (BufferedReader br = new BufferedReader(new FileReader(fileDir))) {
       String currentLine;
       while ((currentLine = br.readLine()) != null) {

@@ -5,9 +5,10 @@ import Jama.*;
 
 public class Main {
   public static int t0 = 0;
-  public static int T = 17;
+  public static int T = 50;
   public static double lambda = 0.5;
-  public static double sigma = 1;   // current results are based on sigma = 1
+  public static double sigma = 0.5;   // current results are based on sigma = 1
+  public static double sigma_0 = 1e3; // sigma for t=0
 //  public static double sigma;
 //  public static String lambda_str;
 //  public static double delta = 0.5;
@@ -20,15 +21,15 @@ public class Main {
   public static double scale = 0.2;
   public static double scale_0 = 0;
   public static int N_SAMPLES = 0;   // number of samples from multi-variate normal distribution
-    // todo: check the effect of N_SAMPLES
   public static Random rand = new Random();
 
-  public static int n = 110;    // TODO
-  public static int K = 15;
-  public static double lr_1 = 0.03;
-  public static double lr_2 = 0.002;
-  public static int MAX_ITER = 50;
-  public static int INNER_ITER = 300;
+  public static int n = 78;    // TODO
+//  public static int n = 110;    // TODO
+  public static int K = 10;
+  public static double lr_1 = 0.003;
+  public static double lr_2 = 0.003;
+  public static int MAX_ITER = 20;
+  public static int INNER_ITER = 500;
 
   /* global data */
   public static List<double[][]> GS = new ArrayList<double[][]>(T);   // graph
@@ -71,9 +72,11 @@ public class Main {
     /* read, init data & parameters */
     for (int t = t0; t < T; t++) {
 //      String fileDir = "../../data/graph/" + Integer.toString(t) + ".csv";  // original co-voting dataset
-      String file_dir_pos = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.csv";	// nips dataset (smaller)
-      String file_dir_neg = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.neg.csv"; // nips dataset (smaller)
-      Map<Integer, Double> freq = FileParser.readCSVDict(file_dir_pos);
+//      String file_dir_pos = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.csv";	// nips dataset (smaller)
+//      String file_dir_neg = "../../data_sm/nips_17/out/" + seed + "/" + Integer.toString(t) + ".train.neg.csv"; // nips dataset (smaller)
+      String file_dir_pos = "../../data_sm/infocom/out/" + seed + "/" + Integer.toString(t) + ".train.csv";	// infocom dataset (smaller)
+      String file_dir_neg = "../../data_sm/infocom/out/" + seed + "/" + Integer.toString(t) + ".train.neg.csv"; // infocom dataset (smaller)
+      Map<Integer, Integer> freq = FileParser.readCSVDict(file_dir_pos);
 
       double[][] G = new double[n][n];
       double[][] A = new double[n][n];
@@ -144,6 +147,7 @@ public class Main {
 	  double[][] h_hat_t = h_hat_s.get(t);
 	  double[][] grad_h_hat_t = grad_h_hat_s.get(t);
 	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	    h_hat_t[i][k] *= (1 - 1/(sigma_0*sigma_0));     // TODO: added for test
 	    h_hat_t[i][k] += lr_1 * grad_h_hat_t[i][k];
 	  }
 	  h_hat_s.set(t, h_hat_t);
@@ -160,7 +164,7 @@ public class Main {
 	inner_iter_1 += 1;
       }
       if (inner_iter_1 == INNER_ITER) lr_1 *= 2;
-      /* sample */
+      /* sample h from the corresponding variational parameters \hat{\mu} */
       for (int t = 0; t < T-t0; t++) {
 	double[][] samples = Operations.sample_multivariate_normal(mu_hat_s.get(t), v_hat_s.get(t), N_SAMPLES);
 	double[][] h_t = new double[n][K];
@@ -182,6 +186,7 @@ public class Main {
 	  double[][] h_hat_prime_t = h_hat_prime_s.get(t);
 	  double[][] grad_h_hat_prime_t = grad_h_hat_prime_s.get(t);
 	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	    h_hat_prime_t[i][k] *= (1 - 1/(sigma_0*sigma_0));     // TODO: added for test
 	    h_hat_prime_t[i][k] += lr_2 * grad_h_hat_prime_t[i][k];
 	  }
 	  h_hat_prime_s.set(t, h_hat_prime_t);
@@ -227,7 +232,7 @@ public class Main {
       if (iter != 0 && diff_1 < 1e-6 && diff_2 < 1e-6) {
 	System.out.println("diff_1 = " + diff_1);
 	System.out.println("diff_2 = " + diff_2);
-	break;
+//	break;
       }
       old_obj_1 = new_obj_1; old_obj_2 = new_obj_2;
     }
@@ -240,7 +245,6 @@ public class Main {
   public static double compute_objective1() {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
-      double[][] G_t = GS.get(t);
       double[][] h_prime_t = h_prime_s.get(t);
       double[][] mu_hat_t = mu_hat_s.get(t);
       double delta_t = delta_s.get(t);
@@ -255,13 +259,13 @@ public class Main {
       /* first term: regardless of t */
       for (int e: pos_link_t) {
 	int i = e/n; int j = e%n;
-	double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
+	double hp_muh = Operations.inner_product(mu_hat_t[i], h_prime_t[j], K);
 	double power = hp_muh + hp2delta2[j];
 	res += (hp_muh - Operations.log_one_plus_exp(power));
       }
       for (int e: neg_link_t) {
 	int i = e/n; int j = e%n;
-	double hp_muh = Operations.inner_product(h_prime_t[j], mu_hat_t[i], K);
+	double hp_muh = Operations.inner_product(mu_hat_t[i], h_prime_t[j], K);
 	double power = hp_muh + hp2delta2[j];
 	res -= Operations.log_one_plus_exp(power);
       }
@@ -275,6 +279,10 @@ public class Main {
 	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
 	  double diff = mu_hat_t[i][k] - (1-lambda) * mu_hat_pre_t[i][k] - lambda * ave_neighbors.get(i,k);
 	  res -= 0.5 * diff * diff / (sigma*sigma);
+	}
+      } else {
+	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	  res -= 0.5 * mu_hat_t[i][k] * mu_hat_t[i][k] / (sigma_0*sigma_0);
 	}
       }
     }
@@ -290,7 +298,6 @@ public class Main {
 
     for (int t = 0; t < T-t0; t++) {
       double delta_t = delta_s.get(t);
-      double[][] G_t = GS.get(t);
       double[][] h_prime_t = h_prime_s.get(t);
       double[][] mu_hat_t = mu_hat_s.get(t);
       List<Integer> pos_link_t = pos_links.get(t);
@@ -342,8 +349,14 @@ public class Main {
 	    tmp_grad_h_hat_s[s][i][k] += g2;
 	  }
 	}
-      } 
-
+      } else {
+	for (int s = 0; s < T-t0; s++) {
+	  double[][] grad_hat_t = grad_mu_hat_s.get( t * (T-t0) + s );
+	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	    tmp_grad_h_hat_s[s][i][k] -= mu_hat_t[i][k] * grad_hat_t[i][k] / (sigma_0*sigma_0);
+	  }
+	}
+      }
     }
 
     /* update global gradient */
@@ -367,7 +380,6 @@ public class Main {
   public static double compute_objective2() {
     double res = 0;
     for (int t = 0; t < T-t0; t++) {
-      double[][] G_t = GS.get(t); 
       double[][] h_t = h_s.get(t);
       double[][] mu_hat_prime_t = mu_hat_prime_s.get(t);
       double delta_t = delta_s.get(t);
@@ -412,6 +424,10 @@ public class Main {
 	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
 	  double diff = mu_hat_prime_t[i][k] - mu_hat_prime_pre_t[i][k];
 	  res -= 0.5 * diff * diff / (sigma*sigma);
+	}
+      } else {
+	for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	  res -= 0.5 * h_t[i][k] * h_t[i][k] / (sigma_0*sigma_0);
 	}
       }
     }
@@ -465,7 +481,6 @@ public class Main {
 	Matrix a = new Matrix(AS.get(t-1));
 	Matrix hprime_pre_t = new Matrix(h_prime_s.get(t-1));
 	Matrix ave_neighbors = a.times(hprime_pre_t);
-	double[][] G_pre_t = GS.get(t-1);   // G^{t-1}
 	double[][] A_pre_t = AS.get(t-1);   // A^{t-1}
 	double[][] h_pre_t = h_s.get(t-1);  // h^{t-1}
 	double[][] mu_hat_prime_pre_t = mu_hat_prime_s.get(t-1);  // \hat{\mu}'^{t-1}  [t]
@@ -490,7 +505,14 @@ public class Main {
 	    tmp_grad_h_hat_prime_s[s][i][k] += g3;
 	  }
 	}
-      } 
+      } else {
+	for (int s = 0; s < T-t0; s++) {
+	  double[][] grad_mu_hat_prime_t = grad_mu_hat_prime_s.get( t * (T-t0) + s );
+	  for (int i = 0; i < n; i++) for (int k = 0; k < K; k++) {
+	    tmp_grad_h_hat_prime_s[s][i][k] -= mu_hat_prime_t[i][k] * grad_mu_hat_prime_t[i][k] / (sigma_0*sigma_0);
+	  }
+	}
+      }
     }
 
     /* update global gradient */
@@ -536,7 +558,7 @@ public class Main {
       if (t != 0) {
 	double delta_t = delta_s.get(t);      // delta_t
 	double[][] h_hat_t = h_hat_s.get(t);  // \hat{h}^t  [t]
-	double[][] mu_pre_t = mu_s.get(t-1);    // mu^{t-1} (N*1)
+	double[][] mu_pre_t = mu_s.get(t-1);  // mu^{t-1} (N*1)
 	double V_pre_t = v_s.get(t-1);	      // V^{t-1}
 
 	Matrix a = new Matrix(AS.get(t-1));   // A^{t-1}
